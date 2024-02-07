@@ -1,5 +1,11 @@
 package main
 
+type Config struct {
+	XTB struct {
+		AuthURL string `yaml:"authURL"`
+	} `yaml:"XTB"`
+}
+
 func main() {
 	//plik z logami
 	//logger inicjalizacja
