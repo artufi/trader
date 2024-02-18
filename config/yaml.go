@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -6,15 +6,14 @@ import (
 	"os"
 )
 
-func GetLogFile(name string) (*os.File, error) {
-	file, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+func Must(err error) {
 	if err != nil {
-		return nil, fmt.Errorf("failed to open log file: %w", err)
+		panic(err)
 	}
-	return file, nil
 }
 
 // LoadYAMLConf YAML format is required
+// conf must be pointer
 func LoadYAMLConf(name string, conf interface{}) error {
 	data, err := os.ReadFile(name)
 	if err != nil {
