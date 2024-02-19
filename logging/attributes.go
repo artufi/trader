@@ -1,7 +1,6 @@
 package logging
 
 import (
-	"github.com/google/uuid"
 	"log/slog"
 )
 
@@ -21,6 +20,6 @@ func UserIDAttr(userID string) slog.Attr {
 	return slog.Any("userID", userID)
 }
 
-func TransactionIDAttr(transactionID uuid.UUID) slog.Attr {
-	return slog.Any("transactionID", transactionID)
+func TraceIDAttr(traceID string) slog.Attr {
+	return slog.Any("traceID", traceID)
 }
