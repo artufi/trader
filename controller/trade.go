@@ -1,47 +1,51 @@
 package controller
 
 import (
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"trader/config"
+	"trader/controller/middleware"
 	"trader/infrastructure/websocket"
-	"trader/logging"
 	"trader/xtb"
 	"trader/xtb/command"
 )
 
 func TradeHandler(cfg config.Config, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		transactionID := uuid.New()
-		userID := cfg.Testing.UserID
-		logger.Info("Starting processing trade request",
-			logging.UserIDAttr(userID), logging.ClientIPAttr(r.RemoteAddr), logging.TransactionIDAttr(transactionID))
+		ctx := r.Context()
 
-		wsClient, err := wsManager.Dial(cfg.XTB.Demo.WebSocketURL, nil, r.RemoteAddr, userID)
+		logger.InfoContext(ctx, "Starting processing TRADE request")
+
+		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
+		if !ok {
+			http.Error(w, "Connection details are not available", http.StatusBadRequest)
+			return
+		}
+
+		wsClient, err := wsManager.Dial(ctx, cfg.XTB.Demo.WebSocketURL, nil)
 		if err != nil {
-			wsManager.RemoveClient(wsClient)
+			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		//defer wsManager.RemoveClient(wsClient)
 
 		loginJSON, err := xtb.Login(command.LoginArgs{
-			UserID:   userID,
+			UserID:   connDetails.UserID,
 			Password: cfg.Testing.Password,
 		})
 		if err != nil {
-			wsManager.RemoveClient(wsClient)
+			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		go wsClient.ReadMessages()
+		go wsClient.ReadMessages(ctx)
 
 		// login
 		err = wsClient.WriteText(loginJSON)
 		if err != nil {
-			wsManager.RemoveClient(wsClient)
+			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
