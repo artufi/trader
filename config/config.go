@@ -1,6 +1,6 @@
 package config
 
-type Config struct {
+type AppConfig struct {
 	XTB struct {
 		Demo struct {
 			WebSocketURL    string `yaml:"websocketURL"`

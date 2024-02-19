@@ -20,7 +20,7 @@ func main() {
 	logFile := logging.Must(logging.GetLogFile("app.log"))
 	logger := slog.New(logging.LogHandler{Handler: slog.NewJSONHandler(logFile, nil)})
 
-	cfg := config.Config{}
+	cfg := config.AppConfig{}
 	config.Must(config.LoadYAMLConf(filepath.Join("config", fmt.Sprintf("cfg-%s.yaml", env)), &cfg))
 
 	dialer := &ws.Dialer{}

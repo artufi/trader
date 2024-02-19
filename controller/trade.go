@@ -10,7 +10,7 @@ import (
 	"trader/xtb/command"
 )
 
-func TradeHandler(cfg config.Config, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
+func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
