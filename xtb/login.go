@@ -7,13 +7,13 @@ import (
 )
 
 func Login(loginArgs command.LoginArgs) ([]byte, error) {
-	loginData := command.Login{
+	login := command.Login{
 		Command:   "login",
 		Arguments: loginArgs,
 	}
-	loginJSON, err := json.Marshal(loginData)
+	loginJSON, err := json.Marshal(login)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize login request: %w", err)
+		return nil, fmt.Errorf("failed to serialize login data: %w", err)
 	}
 	return loginJSON, nil
 }
