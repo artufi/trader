@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"trader/config"
 	"trader/controller"
+	"trader/controller/middleware"
 	"trader/infrastructure/websocket"
 	"trader/logging"
 )
@@ -17,7 +18,7 @@ var env = "dev"
 
 func main() {
 	logFile := logging.Must(logging.GetLogFile("app.log"))
-	logger := slog.New(slog.NewJSONHandler(logFile, nil))
+	logger := slog.New(logging.LogHandler{Handler: slog.NewJSONHandler(logFile, nil)})
 
 	cfg := config.Config{}
 	config.Must(config.LoadYAMLConf(filepath.Join("config", fmt.Sprintf("cfg-%s.yaml", env)), &cfg))
@@ -26,6 +27,7 @@ func main() {
 	wsManager := websocket.NewWSManager(dialer, logger)
 
 	r := chi.NewRouter()
+	r.Use(middleware.ConnDetailsMiddleware(cfg, logger))
 	r.Get("/payload", controller.TradeHandler(cfg, wsManager, logger))
 
 	http.ListenAndServe(":3000", r)
