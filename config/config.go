@@ -8,7 +8,7 @@ type Config struct {
 		} `yaml:"demo"`
 	} `yaml:"XTB"`
 	Testing struct {
-		UserID   string `json:"userID"`
-		Password string `json:"password"`
-	} `json:"testing"`
+		UserID   string `yaml:"userID"`
+		Password string `yaml:"password"`
+	} `yaml:"testing"`
 }
