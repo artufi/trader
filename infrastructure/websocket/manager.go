@@ -1,11 +1,14 @@
 package websocket
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log/slog"
 	"net/http"
 	"sync"
+	"trader/controller/middleware"
 	"trader/logging"
 )
 
@@ -28,45 +31,49 @@ type WSManager struct {
 }
 
 // Dial creates a new client
-func (wsh *WSManager) Dial(url string, requestHeader http.Header, reqIP string, userID string) (*WSClient, error) {
+func (wsh *WSManager) Dial(ctx context.Context, url string, requestHeader http.Header) (*WSClient, error) {
 	conn, resp, err := wsh.dialer.Dial(url, requestHeader)
 	if err != nil {
 		if resp != nil {
 			resp.Body.Close()
-			wsh.logger.Error("Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url),
-				"statusCode", resp.StatusCode)
+			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url), "statusCode", resp.StatusCode)
 		} else {
-			wsh.logger.Error("Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url))
+			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url))
 		}
 		return nil, fmt.Errorf("failed to establish Websocket connection: %w", err)
+	}
+
+	connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
+	if !ok {
+		return nil, errors.New("lack of connection details")
 	}
 
 	client := &WSClient{
 		conn:    conn,
 		manager: wsh,
 		logger:  wsh.logger,
-		ip:      reqIP,
-		userID:  userID,
+		userID:  connDetails.UserID,
+		ip:      connDetails.IPAddr,
 	}
-	wsh.addClient(client)
+	wsh.addClient(ctx, client)
 
 	return client, nil
 }
 
-func (wsh *WSManager) addClient(client *WSClient) {
+func (wsh *WSManager) addClient(ctx context.Context, client *WSClient) {
 	wsh.Lock()
 	defer wsh.Unlock()
 
-	wsh.logger.Info("Adding new client", logging.UserIDAttr(client.userID), logging.ClientIPAttr(client.ip))
+	wsh.logger.InfoContext(ctx, "Adding new client")
 	wsh.clients[client] = true
 }
 
-func (wsh *WSManager) RemoveClient(client *WSClient) {
+func (wsh *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
 	wsh.Lock()
 	defer wsh.Unlock()
 
 	if _, ok := wsh.clients[client]; ok {
-		wsh.logger.Info("Removing client", logging.UserIDAttr(client.userID), logging.ClientIPAttr(client.ip))
+		wsh.logger.InfoContext(ctx, "Removing client")
 		client.Close()
 		delete(wsh.clients, client)
 	}
