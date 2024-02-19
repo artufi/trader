@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"github.com/gorilla/websocket"
 	"log/slog"
 	"trader/logging"
@@ -18,9 +19,9 @@ func (wsc *WSClient) Close() {
 	wsc.conn.Close()
 }
 
-func (wsc *WSClient) ReadMessages() {
+func (wsc *WSClient) ReadMessages(ctx context.Context) {
 	defer func() {
-		wsc.manager.RemoveClient(wsc)
+		wsc.manager.RemoveClient(ctx, wsc)
 	}()
 
 	for {
@@ -28,11 +29,11 @@ func (wsc *WSClient) ReadMessages() {
 		if err != nil {
 			//websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure)
 			if err != nil {
-				wsc.logger.Error("Failed to read a message.", logging.ErrorAttr(err))
+				wsc.logger.ErrorContext(ctx, "Failed to read a message", logging.ErrorAttr(err))
 			}
 			break
 		}
-		wsc.logger.Info("Response message.", "messageType", messageType, "payload", string(payload))
+		wsc.logger.InfoContext(ctx, "Response message", "messageType", messageType, "payload", string(payload))
 	}
 }
 
