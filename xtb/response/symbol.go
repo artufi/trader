@@ -5,7 +5,42 @@ type GetSymbol struct {
 	ReturnData SymbolDetails `json:"returnData"`
 }
 
+type GetSymbolExtended struct {
+	Status     bool                  `json:"status"`
+	ReturnData SymbolDetailsExtended `json:"returnData"`
+}
+
 type SymbolDetails struct {
+	Symbol            string      `json:"symbol"`
+	Currency          string      `json:"currency"`
+	ContractSize      int         `json:"contractSize"`
+	Time              int64       `json:"time"`
+	Precision         int         `json:"precision"`
+	Type              int         `json:"type"`
+	LongOnly          bool        `json:"longOnly"`
+	TrailingEnabled   bool        `json:"trailingEnabled"`
+	Percentage        float64     `json:"percentage"`
+	Bid               float64     `json:"bid"`
+	Ask               float64     `json:"ask"`
+	High              float64     `json:"high"`
+	Low               float64     `json:"low"`
+	LotMin            float64     `json:"lotMin"`
+	LotMax            float64     `json:"lotMax"`
+	LotStep           float64     `json:"lotStep"`
+	TickSize          float64     `json:"tickSize"`
+	TickValue         float64     `json:"tickValue"`
+	SpreadRaw         float64     `json:"spreadRaw"`
+	SpreadTable       float64     `json:"spreadTable"`
+	Starting          interface{} `json:"starting"`
+	MarginMaintenance int         `json:"marginMaintenance"`
+	MarginHedged      int         `json:"marginHedged"`
+	InitialMargin     int         `json:"initialMargin"`
+	TimeString        string      `json:"timeString"`
+	ShortSelling      bool        `json:"shortSelling"`
+	CurrencyPair      bool        `json:"currencyPair"`
+}
+
+type SymbolDetailsExtended struct {
 	Symbol             string      `json:"symbol"`
 	Currency           string      `json:"currency"`
 	CategoryName       string      `json:"categoryName"`
