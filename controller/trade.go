@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"trader/config"
@@ -12,8 +13,10 @@ import (
 
 func TradeHandler(cfg config.Config, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		transactionID := uuid.New()
 		userID := cfg.Testing.UserID
-		logger.Info("Starting processing trade request", logging.UserIDAttr(userID), logging.ClientIPAttr(r.RemoteAddr))
+		logger.Info("Starting processing trade request",
+			logging.UserIDAttr(userID), logging.ClientIPAttr(r.RemoteAddr), logging.TransactionIDAttr(transactionID))
 
 		wsClient, err := wsManager.Dial(cfg.XTB.Demo.WebSocketURL, nil, r.RemoteAddr, userID)
 		if err != nil {
@@ -35,6 +38,7 @@ func TradeHandler(cfg config.Config, wsManager *websocket.WSManager, logger *slo
 
 		go wsClient.ReadMessages()
 
+		// login
 		err = wsClient.WriteText(loginJSON)
 		if err != nil {
 			wsManager.RemoveClient(wsClient)
