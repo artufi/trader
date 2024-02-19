@@ -44,6 +44,7 @@ func (wsh *WSManager) Dial(url string, requestHeader http.Header, reqIP string, 
 	client := &WSClient{
 		conn:    conn,
 		manager: wsh,
+		logger:  wsh.logger,
 		ip:      reqIP,
 		userID:  userID,
 	}
