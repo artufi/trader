@@ -12,24 +12,24 @@ type TradeTransactionArgs struct {
 type operationCode int
 
 const (
-	OPEN operationCode = iota
-	PENDING
-	CLOSE
-	MODIFY
-	DELETE
+	OPEN    operationCode = 0
+	PENDING               = 1
+	CLOSE                 = 2
+	MODIFY                = 3
+	DELETE                = 4
 )
 
 type transactionType int
 
 const (
-	BUY transactionType = iota
-	SELL
-	BUY_LIMIT
-	SELL_LIMIT
-	BUY_STOP
-	SELL_STOP
-	BALANCE
-	CREDIT
+	BUY        transactionType = 0
+	SELL                       = 1
+	BUY_LIMIT                  = 2
+	SELL_LIMIT                 = 3
+	BUY_STOP                   = 4
+	SELL_STOP                  = 5
+	BALANCE                    = 6
+	CREDIT                     = 7
 )
 
 type TradeTransInfo struct {
