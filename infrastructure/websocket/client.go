@@ -19,21 +19,28 @@ func (wsc *WSClient) Close() {
 	wsc.conn.Close()
 }
 
-func (wsc *WSClient) ReadMessages(ctx context.Context) {
+func (wsc *WSClient) ReadMessages(ctx context.Context, respCh chan<- []byte) {
 	defer func() {
 		wsc.manager.RemoveClient(ctx, wsc)
 	}()
 
 	for {
-		messageType, payload, err := wsc.conn.ReadMessage()
-		if err != nil {
-			//websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure)
+		select {
+		case <-ctx.Done():
+			close(respCh)
+			return
+		default:
+			_, response, err := wsc.conn.ReadMessage()
 			if err != nil {
+				//websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure)
 				wsc.logger.ErrorContext(ctx, "Failed to read a message", logging.ErrorAttr(err))
+				close(respCh)
+				return
 			}
-			break
+			if len(response) > 0 {
+				respCh <- response
+			}
 		}
-		wsc.logger.InfoContext(ctx, "Response message", "messageType", messageType, "payload", string(payload))
 	}
 }
 
