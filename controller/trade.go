@@ -1,13 +1,19 @@
 package controller
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
+	"time"
 	"trader/config"
 	"trader/controller/middleware"
 	"trader/infrastructure/websocket"
+	"trader/logging"
+	"trader/model"
 	"trader/xtb"
 	"trader/xtb/command"
+	"trader/xtb/response"
 )
 
 func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
@@ -29,6 +35,8 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 			return
 		}
 		//defer wsManager.RemoveClient(wsClient)
+		respCh := make(chan []byte)
+		go wsClient.ReadMessages(ctx, respCh)
 
 		loginJSON, err := xtb.Login(command.LoginArgs{
 			UserID:   connDetails.UserID,
@@ -39,15 +47,118 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		go wsClient.ReadMessages(ctx)
-
-		// login
+		logger.Info("Processing message", logging.MsgAttr(string(loginJSON)))
 		err = wsClient.WriteText(loginJSON)
 		if err != nil {
 			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		loginResponse, ok := <-respCh
+		if !ok {
+			wsManager.RemoveClient(ctx, wsClient)
+			logger.ErrorContext(ctx, "Channel closed something happened with reader while processing loginResponse")
+			return
+		}
+		wsLoginResponse := response.GeneralResponse{}
+		if err := json.Unmarshal(loginResponse, &wsLoginResponse); err != nil {
+			wsManager.RemoveClient(ctx, wsClient)
+			logger.ErrorContext(ctx, "Failed to read a response", logging.ErrorAttr(err))
+			return
+		}
+		logger.Info("Received response", "resp", wsLoginResponse)
+
+		// get trade instructions
+		tradeInstrs := make([]model.TradeInstruction, 0)
+		err = json.NewDecoder(r.Body).Decode(&tradeInstrs)
+		if err != nil {
+			wsManager.RemoveClient(ctx, wsClient)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		errors := make([]string, 0)
+		for _, tradeInstr := range tradeInstrs {
+			logger.InfoContext(ctx, "Processing trade instruction", logging.TradeInstrAttr(tradeInstr))
+
+			// get symbol details
+			symbol := strings.ToUpper(tradeInstr.Symbol)
+			symbolJSON, err := xtb.GetSymbol(command.GetSymbolArgs{
+				Symbol: symbol,
+			})
+			if err != nil {
+				logger.ErrorContext(ctx, "Failed to process getSymbol", logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+				errors = append(errors, err.Error())
+				continue
+			}
+			logger.Info("Processing message", logging.MsgAttr(string(symbolJSON)))
+			err = wsClient.WriteText(symbolJSON)
+			if err != nil {
+				logger.ErrorContext(ctx, "Failed to write text", logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+				continue
+			}
+
+			symbolResponse := <-respCh
+			wsSymbolResponse := response.GetSymbol{}
+			if err := json.Unmarshal(symbolResponse, &wsSymbolResponse); err != nil {
+				wsManager.RemoveClient(ctx, wsClient)
+				logger.ErrorContext(ctx, "Failed to read a response", logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+				return
+			}
+			logger.Info("Received response", "resp", wsSymbolResponse)
+
+			tradeTransInfo := command.TradeTransInfo{
+				CustomComment: "test",
+				Expiration:    time.Now().Add(time.Minute * 10).UnixMilli(),
+				Price:         wsSymbolResponse.ReturnData.Ask,
+				Symbol:        symbol,
+				Type:          command.BUY,
+				Volume:        0.1,
+			}
+			if tradeInstr.PredsProba >= 0.5 {
+				tradeTransInfo.Cmd = command.OPEN
+			} else {
+				logger.InfoContext(ctx, "Too low value nothing to process",
+					logging.SymbolAttr(symbol), "preds_proba", tradeInstr.PredsProba)
+				continue
+			}
+			tradeTransactionJSON, err := xtb.TradeTransaction(command.TradeTransactionArgs{
+				TradeTransInfo: tradeTransInfo})
+
+			if err != nil {
+				logger.ErrorContext(ctx, "Failed to process tradeTransaction", logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+				errors = append(errors, err.Error())
+				continue
+			}
+			logger.InfoContext(ctx, "Message to process", logging.MsgAttr(string(tradeTransactionJSON)))
+			err = wsClient.WriteText(tradeTransactionJSON)
+			if err != nil {
+				logger.ErrorContext(ctx, "Failed to write text", logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+				continue
+			}
+			tradeTransResponse := <-respCh
+			wsTradeTransResponse := response.GeneralResponse{}
+			if err := json.Unmarshal(tradeTransResponse, &wsTradeTransResponse); err != nil {
+				wsManager.RemoveClient(ctx, wsClient)
+				logger.ErrorContext(ctx, "Failed to read a response", logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+				return
+			}
+			logger.Info("Received response", logging.SymbolAttr(symbol), "resp", wsTradeTransResponse)
+		}
+
+		if len(errors) > 0 {
+			errorsJoined := strings.Join(errors, ",")
+			logger.ErrorContext(ctx, "Failed to write text", "errors", errorsJoined)
+			wsManager.RemoveClient(ctx, wsClient)
+			http.Error(w, errorsJoined, http.StatusInternalServerError)
+			return
+		}
+		logger.Info("Successfully processed")
 	}
 }
