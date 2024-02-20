@@ -3,11 +3,15 @@ package response
 type GetSymbol struct {
 	Status     bool          `json:"status"`
 	ReturnData SymbolDetails `json:"returnData"`
+	ErrorCode  string        `json:"errorCode,omitempty"`
+	ErrorDescr string        `json:"errorDescr,omitempty"`
 }
 
 type GetSymbolExtended struct {
 	Status     bool                  `json:"status"`
 	ReturnData SymbolDetailsExtended `json:"returnData"`
+	ErrorCode  string                `json:"errorCode,omitempty"`
+	ErrorDescr string                `json:"errorDescr,omitempty"`
 }
 
 type SymbolDetails struct {
