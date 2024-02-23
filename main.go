@@ -30,5 +30,6 @@ func main() {
 	r.Use(middleware.ConnDetailsMiddleware(cfg, logger))
 	r.Get("/payload", controller.TradeHandler(cfg, wsManager, logger))
 
+	logger.Info("Starting application port: 3000...")
 	http.ListenAndServe(":3000", r)
 }
