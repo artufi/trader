@@ -120,6 +120,8 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 				Symbol:        symbol,
 				Type:          command.BUY,
 				Volume:        0.1,
+				// precision!
+				Tp: tradeInstr.TakeProfit,
 			}
 			if tradeInstr.PredsProba >= 0.5 {
 				tradeTransInfo.Cmd = command.OPEN
