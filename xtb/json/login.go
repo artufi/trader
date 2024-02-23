@@ -1,4 +1,4 @@
-package xtb
+package json
 
 import (
 	"encoding/json"
