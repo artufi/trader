@@ -11,16 +11,15 @@ import (
 	"trader/infrastructure/websocket"
 	"trader/logging"
 	"trader/model"
-	"trader/xtb"
 	"trader/xtb/command"
+	jsonxtb "trader/xtb/json"
 	"trader/xtb/response"
 )
 
 func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-
-		logger.InfoContext(ctx, "Starting processing TRADE request")
+		logger.InfoContext(ctx, "Start processing trade request")
 
 		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
 		if !ok {
@@ -28,17 +27,19 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 			return
 		}
 
-		wsClient, err := wsManager.Dial(ctx, cfg.XTB.Demo.WebSocketURL, nil)
+		wsClient, err := wsManager.DialForNewClient(ctx, cfg.XTB.Demo.WebSocketURL, nil)
 		if err != nil {
 			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		//defer wsManager.RemoveClient(wsClient)
-		respCh := make(chan []byte)
+
+		// TODO
+		// size 1?
+		respCh := make(chan []byte, 1)
 		go wsClient.ReadMessages(ctx, respCh)
 
-		loginJSON, err := xtb.Login(command.LoginArgs{
+		loginJSON, err := jsonxtb.Login(command.LoginArgs{
 			UserID:   connDetails.UserID,
 			Password: cfg.Testing.Password,
 		})
@@ -48,7 +49,7 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 			return
 		}
 		logger.Info("Processing message", logging.MsgAttr(string(loginJSON)))
-		err = wsClient.WriteText(loginJSON)
+		err = wsClient.WriteText(ctx, loginJSON)
 		if err != nil {
 			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -83,7 +84,7 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 
 			// get symbol details
 			symbol := strings.ToUpper(tradeInstr.Symbol)
-			symbolJSON, err := xtb.GetSymbol(command.GetSymbolArgs{
+			symbolJSON, err := jsonxtb.GetSymbol(command.GetSymbolArgs{
 				Symbol: symbol,
 			})
 			if err != nil {
@@ -93,10 +94,11 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 				continue
 			}
 			logger.Info("Processing message", logging.MsgAttr(string(symbolJSON)))
-			err = wsClient.WriteText(symbolJSON)
+			err = wsClient.WriteText(ctx, symbolJSON)
 			if err != nil {
 				logger.ErrorContext(ctx, "Failed to write text", logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
+				errors = append(errors, err.Error())
 				continue
 			}
 
@@ -106,6 +108,7 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 				wsManager.RemoveClient(ctx, wsClient)
 				logger.ErrorContext(ctx, "Failed to read a response", logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
+				errors = append(errors, err.Error())
 				return
 			}
 			logger.Info("Received response", "resp", wsSymbolResponse)
@@ -125,7 +128,7 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 					logging.SymbolAttr(symbol), "preds_proba", tradeInstr.PredsProba)
 				continue
 			}
-			tradeTransactionJSON, err := xtb.TradeTransaction(command.TradeTransactionArgs{
+			tradeTransactionJSON, err := jsonxtb.TradeTransaction(command.TradeTransactionArgs{
 				TradeTransInfo: tradeTransInfo})
 
 			if err != nil {
@@ -135,10 +138,11 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 				continue
 			}
 			logger.InfoContext(ctx, "Message to process", logging.MsgAttr(string(tradeTransactionJSON)))
-			err = wsClient.WriteText(tradeTransactionJSON)
+			err = wsClient.WriteText(ctx, tradeTransactionJSON)
 			if err != nil {
 				logger.ErrorContext(ctx, "Failed to write text", logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
+				errors = append(errors, err.Error())
 				continue
 			}
 			tradeTransResponse := <-respCh
@@ -147,6 +151,7 @@ func TradeHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *
 				wsManager.RemoveClient(ctx, wsClient)
 				logger.ErrorContext(ctx, "Failed to read a response", logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
+				errors = append(errors, err.Error())
 				return
 			}
 			logger.Info("Received response", logging.SymbolAttr(symbol), "resp", wsTradeTransResponse)
