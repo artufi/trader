@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 	"trader/controller/middleware"
 	"trader/logging"
 )
@@ -19,19 +20,19 @@ func NewWSManager(dialer *websocket.Dialer, logger *slog.Logger) *WSManager {
 	return &WSManager{
 		dialer:  dialer,
 		logger:  logger,
-		clients: make(map[*WSClient]bool),
+		clients: make(map[*WSClient]struct{}),
 	}
 }
 
 type WSManager struct {
 	dialer  *websocket.Dialer
 	logger  *slog.Logger
-	clients map[*WSClient]bool
+	clients map[*WSClient]struct{}
 	sync.RWMutex
 }
 
-// Dial creates a new client
-func (wsh *WSManager) Dial(ctx context.Context, url string, requestHeader http.Header) (*WSClient, error) {
+// DialForNewClient creates a new client
+func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header) (*WSClient, error) {
 	conn, resp, err := wsh.dialer.Dial(url, requestHeader)
 	if err != nil {
 		if resp != nil {
@@ -49,11 +50,12 @@ func (wsh *WSManager) Dial(ctx context.Context, url string, requestHeader http.H
 	}
 
 	client := &WSClient{
-		conn:    conn,
-		manager: wsh,
-		logger:  wsh.logger,
-		userID:  connDetails.UserID,
-		ip:      connDetails.IPAddr,
+		conn:            conn,
+		manager:         wsh,
+		logger:          wsh.logger,
+		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
+		userID:          connDetails.UserID,
+		ip:              connDetails.IPAddr,
 	}
 	wsh.addClient(ctx, client)
 
@@ -64,8 +66,8 @@ func (wsh *WSManager) addClient(ctx context.Context, client *WSClient) {
 	wsh.Lock()
 	defer wsh.Unlock()
 
-	wsh.logger.InfoContext(ctx, "Adding new client")
-	wsh.clients[client] = true
+	wsh.logger.InfoContext(ctx, "Adding a new client")
+	wsh.clients[client] = struct{}{}
 }
 
 func (wsh *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
@@ -74,7 +76,8 @@ func (wsh *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
 
 	if _, ok := wsh.clients[client]; ok {
 		wsh.logger.InfoContext(ctx, "Removing client")
-		client.Close()
+		client.CloseConnection()
+		client.StopSendRateLimiter()
 		delete(wsh.clients, client)
 	}
 }
