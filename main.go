@@ -6,7 +6,6 @@ import (
 	ws "github.com/gorilla/websocket"
 	"log/slog"
 	"net/http"
-	"path/filepath"
 	"trader/config"
 	"trader/controller"
 	"trader/controller/middleware"
@@ -21,7 +20,7 @@ func main() {
 	logger := slog.New(logging.LogHandler{Handler: slog.NewJSONHandler(logFile, nil)})
 
 	cfg := config.AppConfig{}
-	config.Must(config.LoadYAMLConf(filepath.Join("config", fmt.Sprintf("cfg-%s.yaml", env)), &cfg))
+	config.Must(config.LoadFSYAMLConf(config.FSAppConfig, fmt.Sprintf("cfg-%s.yaml", env), &cfg))
 
 	dialer := &ws.Dialer{}
 	wsManager := websocket.NewWSManager(dialer, logger)
