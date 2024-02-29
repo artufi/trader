@@ -11,7 +11,7 @@ import (
 	"trader/xtb/response"
 )
 
-func GetSymbol(ctx context.Context, symbol string, wsClient websocket.WSClient) (response.GetSymbolExtended, error) {
+func GetSymbolExtended(ctx context.Context, symbol string, wsClient *websocket.WSClient) (response.GetSymbolExtended, error) {
 	symbolJSON, err := jsonform.GetSymbol(command.GetSymbolArgs{
 		Symbol: strings.ToUpper(symbol),
 	})
