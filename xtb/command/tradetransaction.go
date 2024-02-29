@@ -45,3 +45,10 @@ type TradeTransInfo struct {
 	Type          transactionType `json:"type"`
 	Volume        float64         `json:"volume"`
 }
+
+type TradeTransactionStatus struct {
+	Command   string `json:"command"`
+	Arguments struct {
+		Order int `json:"order"`
+	} `json:"arguments"`
+}
