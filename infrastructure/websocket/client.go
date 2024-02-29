@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"log/slog"
 	"time"
@@ -18,6 +19,8 @@ type WSClient struct {
 	// User should send requests in 200 ms intervals.
 	// This rule can be broken, but if it happens 6 times in a row the connection is dropped.
 	sendRateLimiter *time.Ticker
+
+	respCh chan []byte
 
 	ip     string
 	userID string
@@ -37,7 +40,7 @@ func (wsc *WSClient) StopSendRateLimiter() {
 
 // TODO
 // what about respCh to have size 1?
-func (wsc *WSClient) ReadMessages(ctx context.Context, respCh chan<- []byte) {
+func (wsc *WSClient) ReadMessages(ctx context.Context) {
 	defer func() {
 		wsc.manager.RemoveClient(ctx, wsc)
 	}()
@@ -48,9 +51,9 @@ func (wsc *WSClient) ReadMessages(ctx context.Context, respCh chan<- []byte) {
 		// *http.Request context is done after processing request
 		// it can be any passed context!
 		case <-ctx.Done():
-			wsc.logger.InfoContext(ctx, "Context done")
+			wsc.logger.InfoContext(ctx, "Context done - reader operation canceled", logging.ErrorAttr(ctx.Err()))
 			// context canceled somewhere so better close channel in case some goroutine waits for a message
-			close(respCh)
+			close(wsc.respCh)
 			return
 		// TODO
 		// conn.ReadMessage is blocking so default case here is not the best pick
@@ -58,9 +61,11 @@ func (wsc *WSClient) ReadMessages(ctx context.Context, respCh chan<- []byte) {
 			// blocking method
 			_, response, err := wsc.conn.ReadMessage()
 			if err != nil {
-				//websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure)
-				wsc.logger.ErrorContext(ctx, "Failed to read a message", logging.ErrorAttr(err))
-				close(respCh)
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure,
+					websocket.CloseNormalClosure) {
+					wsc.logger.ErrorContext(ctx, "Failed to read a message", logging.ErrorAttr(err))
+				}
+				close(wsc.respCh)
 				return
 			}
 			// TODO
@@ -70,30 +75,47 @@ func (wsc *WSClient) ReadMessages(ctx context.Context, respCh chan<- []byte) {
 
 			select {
 			// just send response
-			case respCh <- response:
+			case wsc.respCh <- response:
 			case <-chanBreaker.C:
 				wsc.logger.InfoContext(ctx, "Response channel timeout - protection against goroutine leak")
 				// no need to close respCh as no one waits to receive a message
-				close(respCh)
+				close(wsc.respCh)
 				return
 			// *http.Request context is done after processing request
 			// it can be any passed context!
 			case <-ctx.Done():
-				wsc.logger.InfoContext(ctx, "Context done")
+				wsc.logger.InfoContext(ctx, "Context done - reader operation canceled", logging.ErrorAttr(ctx.Err()))
 				// context canceled somewhere so better close channel in case some goroutine waits for a message
-				close(respCh)
+				close(wsc.respCh)
 				return
 			}
 		}
 	}
 }
 
-func (wsc *WSClient) WriteText(ctx context.Context, data []byte) error {
+func (wsc *WSClient) WriteText(ctx context.Context, data []byte) ([]byte, error) {
 	// channel has reference to client, so it calculates time immediately after receiving Tick
 	// it doesn't start timer when entering this method
 	<-wsc.sendRateLimiter.C
 
 	wsc.logger.InfoContext(ctx, "Writing message", logging.MsgAttr(string(data)))
 	err := wsc.conn.WriteMessage(websocket.TextMessage, data)
-	return err
+	if err != nil {
+		return nil, fmt.Errorf("failed to write message by websocket client: %w", err)
+	}
+	chanBreaker := time.NewTimer(time.Second * readTimeout)
+
+	select {
+	case resp := <-wsc.respCh:
+		return resp, nil
+	case <-chanBreaker.C:
+		wsc.logger.WarnContext(ctx, "Waiting for channel response timeout - protection against goroutine leak")
+		return nil, fmt.Errorf("writer timeout")
+	// *http.Request context is done after processing request
+	// it can be any passed context!
+	case <-ctx.Done():
+		err := ctx.Err()
+		wsc.logger.InfoContext(ctx, "Context done - writer operation canceled", logging.ErrorAttr(err))
+		return nil, fmt.Errorf("writer operation canceled: context done: %w", err)
+	}
 }

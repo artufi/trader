@@ -54,9 +54,16 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 		manager:         wsh,
 		logger:          wsh.logger,
 		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
+		respCh:          make(chan []byte),
 		userID:          connDetails.UserID,
 		ip:              connDetails.IPAddr,
 	}
+	// TODO
+	//client.conn.SetReadDeadline()
+	//client.conn.SetWriteDeadline()
+	//
+	//client.conn.PingHandler()
+
 	wsh.addClient(ctx, client)
 
 	return client, nil
@@ -75,7 +82,7 @@ func (wsh *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
 	defer wsh.Unlock()
 
 	if _, ok := wsh.clients[client]; ok {
-		wsh.logger.InfoContext(ctx, "Removing client")
+		wsh.logger.InfoContext(ctx, "Disconnecting client")
 		client.CloseConnection()
 		client.StopSendRateLimiter()
 		delete(wsh.clients, client)
