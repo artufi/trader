@@ -1,6 +1,6 @@
 package model
 
-type TradeInstruction struct {
+type PurchaseInstruction struct {
 	Symbol     string  `json:"symbol"`
 	Date       string  `json:"date"`
 	Allocation float64 `json:"allocation"`
