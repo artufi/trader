@@ -13,23 +13,23 @@ type transactionType int
 
 const (
 	OPEN    transactionType = 0
-	PENDING                 = 1
-	CLOSE                   = 2
-	MODIFY                  = 3
-	DELETE                  = 4
+	PENDING transactionType = 1
+	CLOSE   transactionType = 2
+	MODIFY  transactionType = 3
+	DELETE  transactionType = 4
 )
 
 type operationCodeCmd int
 
 const (
 	BUY        operationCodeCmd = 0
-	SELL                        = 1
-	BUY_LIMIT                   = 2
-	SELL_LIMIT                  = 3
-	BUY_STOP                    = 4
-	SELL_STOP                   = 5
-	BALANCE                     = 6
-	CREDIT                      = 7
+	SELL       operationCodeCmd = 1
+	BUY_LIMIT  operationCodeCmd = 2
+	SELL_LIMIT operationCodeCmd = 3
+	BUY_STOP   operationCodeCmd = 4
+	SELL_STOP  operationCodeCmd = 5
+	BALANCE    operationCodeCmd = 6
+	CREDIT     operationCodeCmd = 7
 )
 
 type TradeTransInfo struct {
