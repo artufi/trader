@@ -41,13 +41,14 @@ func (pi PurchaseInstruction) PrepareBUYTradeTransInfo(symbolData response.GetSy
 	sl := math.Round((volumePrice-(volumePrice*pi.StopLoss/100))*precision) / precision
 
 	tradeTransInfo := command.TradeTransInfo{
-		Expiration: time.Now().Add(time.Minute * 10).UnixMilli(),
-		Price:      symbolData.ReturnData.Ask,
-		Symbol:     symbolData.ReturnData.Symbol,
-		Type:       command.OPEN,
-		Volume:     volumeToBuy,
-		Sl:         sl,
-		Tp:         tp,
+		CustomComment: "BUY TRANSACTION",
+		Expiration:    time.Now().Add(time.Minute * 10).UnixMilli(),
+		Price:         symbolData.ReturnData.Ask,
+		Symbol:        symbolData.ReturnData.Symbol,
+		Type:          command.OPEN,
+		Volume:        volumeToBuy,
+		Sl:            sl,
+		Tp:            tp,
 	}
 	if pi.PredsProba >= 0.5 {
 		tradeTransInfo.Cmd = command.BUY
@@ -62,18 +63,19 @@ func (pi PurchaseInstruction) PrepareSELLTradeTransInfo(symbolData response.GetS
 	precision := math.Pow(10, 2)
 	// calculate the price for the volume you want to buy,
 	// taking into account the base amount for a specific instrument - it will not necessarily always be 1!
-	volumePrice := (symbolData.ReturnData.Ask * volumeToBuy) / symbolBaseVolume
+	volumePrice := (symbolData.ReturnData.Bid * volumeToBuy) / symbolBaseVolume
 	tp := math.Round((volumePrice-(volumePrice*pi.TakeProfit/100))*precision) / precision
 	sl := math.Round((volumePrice+(volumePrice*pi.StopLoss/100))*precision) / precision
 
 	tradeTransInfo := command.TradeTransInfo{
-		Expiration: time.Now().Add(time.Minute * 10).UnixMilli(),
-		Price:      symbolData.ReturnData.Ask,
-		Symbol:     symbolData.ReturnData.Symbol,
-		Type:       command.OPEN,
-		Volume:     volumeToBuy,
-		Sl:         sl,
-		Tp:         tp,
+		CustomComment: "SELL TRANSACTION",
+		Expiration:    time.Now().Add(time.Minute * 10).UnixMilli(),
+		Price:         symbolData.ReturnData.Bid,
+		Symbol:        symbolData.ReturnData.Symbol,
+		Type:          command.OPEN,
+		Volume:        volumeToBuy,
+		Sl:            sl,
+		Tp:            tp,
 	}
 	if pi.PredsProba >= 0.5 {
 		tradeTransInfo.Cmd = command.SELL
