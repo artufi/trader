@@ -13,7 +13,7 @@ func GetSymbol(getSymbolArgs command.GetSymbolArgs) ([]byte, error) {
 	}
 	getSymbolJSON, err := json.Marshal(getSymbol)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize tradeTransaction data: %w", err)
+		return nil, fmt.Errorf("serialize TradeTransaction command: %w", err)
 	}
 	return getSymbolJSON, nil
 }

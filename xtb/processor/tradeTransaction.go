@@ -24,14 +24,14 @@ func PrepareTradeTransInfo(tradeInstr model.PurchaseInstruction, symbolData resp
 		Expiration:    time.Now().Add(time.Minute * 10).UnixMilli(),
 		Price:         symbolData.ReturnData.Ask,
 		Symbol:        symbolData.ReturnData.Symbol,
-		Type:          command.BUY,
+		Type:          command.OPEN,
 		Volume:        0.2,
 		Sl:            sl,
 		// precision!
 		Tp: tp,
 	}
 	if tradeInstr.PredsProba >= 0.5 {
-		tradeTransInfo.Cmd = command.OPEN
+		tradeTransInfo.Cmd = command.BUY
 	} else {
 		return command.TradeTransInfo{}, fmt.Errorf("preds_proba too low value: %v", tradeInstr.PredsProba)
 	}
@@ -42,17 +42,17 @@ func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo
 	tradeTransactionJSON, err := jsonform.TradeTransaction(command.TradeTransactionArgs{
 		TradeTransInfo: tradeTransInfo})
 	if err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB TradeTransaction command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
 	}
 
 	resp, err := wsClient.WriteText(ctx, tradeTransactionJSON)
 	if err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB TradeTransaction command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
 	}
 
 	wsTradeTransResp := response.GeneralResponse{}
 	if err := json.Unmarshal(resp, &wsTradeTransResp); err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB TradeTransaction command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
 	}
 	return wsTradeTransResp, err
 }
@@ -60,17 +60,17 @@ func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo
 func TradeTransactionStatus(ctx context.Context, orderNo int, wsClient *websocket.WSClient) (response.GeneralResponse, error) {
 	tradeTransactionStatusJSON, err := jsonform.TradeTransactionStatus(orderNo)
 	if err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB TradeTransactionStatus command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
 	}
 
 	resp, err := wsClient.WriteText(ctx, tradeTransactionStatusJSON)
 	if err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB TradeTransactionStatus command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
 	}
 
 	wsTradeTransResp := response.GeneralResponse{}
 	if err := json.Unmarshal(resp, &wsTradeTransResp); err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB TradeTransaction command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
 	}
 	return wsTradeTransResp, err
 }

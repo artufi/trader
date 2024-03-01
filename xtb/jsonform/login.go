@@ -13,7 +13,7 @@ func Login(loginArgs command.LoginArgs) ([]byte, error) {
 	}
 	loginJSON, err := json.Marshal(login)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize login data: %w", err)
+		return nil, fmt.Errorf("serialize Login command: %w", err)
 	}
 	return loginJSON, nil
 }

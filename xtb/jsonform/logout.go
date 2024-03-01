@@ -12,7 +12,7 @@ func Logout() ([]byte, error) {
 	}
 	logoutJSON, err := json.Marshal(logout)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize logout data: %w", err)
+		return nil, fmt.Errorf("serialize Logout command: %w", err)
 	}
 	return logoutJSON, nil
 }

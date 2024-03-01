@@ -17,17 +17,17 @@ func Login(ctx context.Context, cfg config.AppConfig, wsClient *websocket.WSClie
 		Password: cfg.Testing.Password,
 	})
 	if err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB Login command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB Login processor: %w", err)
 	}
 
 	resp, err := wsClient.WriteText(ctx, loginJSON)
 	if err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB Login command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB Login processor: %w", err)
 	}
 
 	wsLoginResp := response.GeneralResponse{}
 	if err := json.Unmarshal(resp, &wsLoginResp); err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("failed to execute XTB Login command: %w", err)
+		return response.GeneralResponse{}, fmt.Errorf("XTB Login processor: %w", err)
 	}
 
 	return wsLoginResp, err
