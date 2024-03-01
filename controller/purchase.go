@@ -29,7 +29,14 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 
 		// log user into XTB
 		loginResponse, err := processor.Login(ctx, cfg, wsClient)
-		if err != nil || loginResponse.CheckStatus() != nil {
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
+			wsManager.RemoveClient(ctx, wsClient)
+			http.Error(w, "Failed to login", http.StatusInternalServerError)
+			return
+		}
+		err = loginResponse.CheckStatus()
+		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, "Failed to login", http.StatusInternalServerError)
@@ -52,24 +59,39 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 
 			// get symbol details
 			symbolResponse, err := processor.GetSymbolExtended(ctx, purchaseInstruction.Symbol, wsClient)
-			if err != nil || symbolResponse.CheckStatus() != nil {
+			if err != nil {
 				logger.WarnContext(ctx, "Failed to process GetSymbol",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
 			}
-			logger.InfoContext(ctx, "Successfully processed GetSymbol",
-				logging.RespAttr(symbolResponse))
+			err = symbolResponse.CheckStatus()
+			if err != nil {
+				logger.WarnContext(ctx, "Failed to process GetSymbol",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(purchaseInstruction.Symbol))
+				continue
+			}
+			logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
 
-			// tradeTransaction
+			// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
 			tradeTransInfo, err := purchaseInstruction.PrepareTradeTransInfo(symbolResponse, 0.2, 0.2)
 			if err != nil {
 				logger.WarnContext(ctx, "Failed to prepare TradeTransInfo", logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
 			}
+
+			// process TradeTransaction
 			tradeResponse, err := processor.TradeTransaction(ctx, tradeTransInfo, wsClient)
-			if err != nil || tradeResponse.CheckStatus() != nil {
+			if err != nil {
+				logger.WarnContext(ctx, "Failed to process TradeTransaction",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(purchaseInstruction.Symbol))
+				continue
+			}
+			err = tradeResponse.CheckStatus()
+			if err != nil {
 				logger.WarnContext(ctx, "Failed to process TradeTransaction",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
@@ -79,7 +101,21 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 
 			// tradeTransactionStatus
 			tradeResponseStatus, err := processor.TradeTransactionStatus(ctx, tradeResponse.ReturnData.Order, wsClient)
-			if err != nil || tradeResponseStatus.CheckStatus() != nil || tradeResponseStatus.CheckRequestStatus() != nil {
+			if err != nil {
+				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(purchaseInstruction.Symbol))
+				continue
+			}
+			err = tradeResponseStatus.CheckStatus()
+			if err != nil {
+				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(purchaseInstruction.Symbol))
+				continue
+			}
+			err = tradeResponseStatus.CheckRequestStatus()
+			if err != nil {
 				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
@@ -90,10 +126,12 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 
 		logoutResponse, err := processor.Logout(ctx, wsClient)
 		if err != nil {
-			logger.WarnContext(ctx, "Failed to process Logout", logging.ErrorAttr(err))
+			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
+			wsManager.RemoveClient(ctx, wsClient)
+			return
 		}
 		logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
 
-		logger.Info("Request processed")
+		logger.Info("Request fully processed")
 	}
 }
