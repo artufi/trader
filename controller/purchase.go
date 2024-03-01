@@ -75,9 +75,10 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
 			}
+
 			logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeResponse))
 
-			tradeResponseStatus, err := processor.TradeTransactionStatus(ctx, int(tradeResponse.ReturnData["order"].(float64)), wsClient)
+			tradeResponseStatus, err := processor.TradeTransactionStatus(ctx, tradeResponse.ReturnData.Order, wsClient)
 			if err != nil {
 				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
 					logging.ErrorAttr(err),
