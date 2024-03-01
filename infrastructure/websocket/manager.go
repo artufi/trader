@@ -73,7 +73,7 @@ func (wsh *WSManager) addClient(ctx context.Context, client *WSClient) {
 	wsh.Lock()
 	defer wsh.Unlock()
 
-	wsh.logger.InfoContext(ctx, "Adding a new client")
+	wsh.logger.InfoContext(ctx, "Adding new client")
 	wsh.clients[client] = struct{}{}
 }
 
