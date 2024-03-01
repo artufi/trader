@@ -1,4 +1,4 @@
-package json
+package jsonform
 
 import (
 	"encoding/json"
@@ -16,4 +16,16 @@ func TradeTransaction(tradeTransactionArgs command.TradeTransactionArgs) ([]byte
 		return nil, fmt.Errorf("failed to serialize tradeTransaction data: %w", err)
 	}
 	return transactionJSON, nil
+}
+
+func TradeTransactionStatus(orderNo int) ([]byte, error) {
+	tradeTransactionStatus := command.TradeTransactionStatus{
+		Command: "tradeTransactionStatus",
+	}
+	tradeTransactionStatus.Arguments.Order = orderNo
+	transactionStatusJSON, err := json.Marshal(tradeTransactionStatus)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize tradeTransactionStatus data: %w", err)
+	}
+	return transactionStatusJSON, nil
 }
