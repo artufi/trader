@@ -1,4 +1,4 @@
-package json
+package jsonform
 
 import (
 	"encoding/json"
