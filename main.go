@@ -27,8 +27,8 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.ConnDetailsMiddleware(cfg, logger))
-	r.Get("/payload", controller.PurchaseHandler(cfg, wsManager, logger))
-	r.Get("/status", controller.TransactionStatusHandler(cfg, wsManager, logger))
+	r.Get("/purchase", controller.PurchaseHandler(cfg, wsManager, logger))
+	r.Get("/purchase/status", controller.TransactionStatusHandler(cfg, wsManager, logger))
 
 	logger.Info("Starting application port: 3000...")
 	http.ListenAndServe(":3000", r)
