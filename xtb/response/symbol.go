@@ -1,5 +1,7 @@
 package response
 
+import "fmt"
+
 type GetSymbol struct {
 	Status     bool `json:"status"`
 	ReturnData struct {
@@ -33,6 +35,14 @@ type GetSymbol struct {
 	} `json:"returnData"`
 	ErrorCode  string `json:"errorCode,omitempty"`
 	ErrorDescr string `json:"errorDescr,omitempty"`
+}
+
+func (gs GetSymbol) CheckStatus() error {
+	if !gs.Status {
+		return fmt.Errorf("XTB TradeTransactionStatus response request status: %t, errorCode: %s, errorDescr: %s",
+			gs.Status, gs.ErrorCode, gs.ErrorDescr)
+	}
+	return nil
 }
 
 type GetSymbolExtended struct {
@@ -89,4 +99,12 @@ type GetSymbolExtended struct {
 	} `json:"returnData"`
 	ErrorCode  string `json:"errorCode,omitempty"`
 	ErrorDescr string `json:"errorDescr,omitempty"`
+}
+
+func (gse GetSymbolExtended) CheckStatus() error {
+	if !gse.Status {
+		return fmt.Errorf("XTB TradeTransactionStatus response request status: %t, errorCode: %s, errorDescr: %s",
+			gse.Status, gse.ErrorCode, gse.ErrorDescr)
+	}
+	return nil
 }

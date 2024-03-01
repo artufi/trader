@@ -29,7 +29,7 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 
 		// log user into XTB
 		loginResponse, err := processor.Login(ctx, cfg, wsClient)
-		if err != nil {
+		if err != nil || loginResponse.CheckStatus() != nil {
 			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, "Failed to login", http.StatusInternalServerError)
@@ -52,7 +52,7 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 
 			// get symbol details
 			symbolResponse, err := processor.GetSymbolExtended(ctx, purchaseInstruction.Symbol, wsClient)
-			if err != nil {
+			if err != nil || symbolResponse.CheckStatus() != nil {
 				logger.WarnContext(ctx, "Failed to process GetSymbol",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
@@ -69,17 +69,17 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 				continue
 			}
 			tradeResponse, err := processor.TradeTransaction(ctx, tradeTransInfo, wsClient)
-			if err != nil {
+			if err != nil || tradeResponse.CheckStatus() != nil {
 				logger.WarnContext(ctx, "Failed to process TradeTransaction",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
 			}
-
 			logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeResponse))
 
+			// tradeTransactionStatus
 			tradeResponseStatus, err := processor.TradeTransactionStatus(ctx, tradeResponse.ReturnData.Order, wsClient)
-			if err != nil {
+			if err != nil || tradeResponseStatus.CheckStatus() != nil || tradeResponseStatus.CheckRequestStatus() != nil {
 				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))

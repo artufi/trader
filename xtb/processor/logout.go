@@ -9,20 +9,20 @@ import (
 	"trader/xtb/response"
 )
 
-func Logout(ctx context.Context, wsClient *websocket.WSClient) (response.GeneralResponse, error) {
+func Logout(ctx context.Context, wsClient *websocket.WSClient) (response.General, error) {
 	logoutJSON, err := jsonform.Logout()
 	if err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("XTB Logout processor: %w", err)
+		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
 	}
 
 	resp, err := wsClient.WriteText(ctx, logoutJSON)
 	if err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("XTB Logout processor: %w", err)
+		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
 	}
 
-	wsLogoutResp := response.GeneralResponse{}
+	wsLogoutResp := response.General{}
 	if err := json.Unmarshal(resp, &wsLogoutResp); err != nil {
-		return response.GeneralResponse{}, fmt.Errorf("XTB Logout processor: %w", err)
+		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
 	}
 
 	return wsLogoutResp, err
