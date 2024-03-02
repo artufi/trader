@@ -58,11 +58,6 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 		userID:          connDetails.UserID,
 		ip:              connDetails.IPAddr,
 	}
-	// TODO
-	//client.conn.SetReadDeadline()
-	//client.conn.SetWriteDeadline()
-	//
-	//client.conn.PingHandler()
 
 	wsh.addClient(ctx, client)
 
