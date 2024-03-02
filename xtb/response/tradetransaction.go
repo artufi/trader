@@ -29,22 +29,22 @@ type TradeTransactionStatus struct {
 		CustomComment string        `json:"customComment"`
 		Message       interface{}   `json:"message"` // not sure maybe pointer?
 		Order         int           `json:"order"`   // not sure maybe float64
-		RequestStatus requestStatus `json:"requestStatus"`
+		RequestStatus RequestStatus `json:"requestStatus"`
 	} `json:"returnData"`
 	ErrorCode  string `json:"errorCode,omitempty"`
 	ErrorDescr string `json:"errorDescr,omitempty"`
 }
 
-type requestStatus int
+type RequestStatus int
 
 const (
-	ERROR requestStatus = iota
-	PENDING
-	ACCEPTED
-	REJECTED
+	ERROR    RequestStatus = 0
+	PENDING  RequestStatus = 1
+	ACCEPTED RequestStatus = 3
+	REJECTED RequestStatus = 4
 )
 
-var requestStatusName = map[requestStatus]string{
+var requestStatusName = map[RequestStatus]string{
 	ERROR:    "ERROR",
 	PENDING:  "PENDING",
 	ACCEPTED: "ACCEPTED",
@@ -59,10 +59,21 @@ func (tts TradeTransactionStatus) CheckStatus() error {
 	return nil
 }
 
-func (tts TradeTransactionStatus) CheckRequestStatus() error {
-	if tts.ReturnData.RequestStatus == ERROR || tts.ReturnData.RequestStatus == REJECTED {
-		return fmt.Errorf("XTB TradeTransactionStatus response requestStatus: %d, message: %s",
+func (tts TradeTransactionStatus) CheckRequestStatus() (RequestStatus, error) {
+	switch tts.ReturnData.RequestStatus {
+	case ERROR:
+		return ERROR, fmt.Errorf("XTB TradeTransactionStatus response requestStatus: %s, message: %s",
 			requestStatusName[tts.ReturnData.RequestStatus], tts.ReturnData.Message)
+	case REJECTED:
+		return REJECTED, fmt.Errorf("XTB TradeTransactionStatus response requestStatus: %s, message: %s",
+			requestStatusName[tts.ReturnData.RequestStatus], tts.ReturnData.Message)
+	case ACCEPTED:
+		return ACCEPTED, nil
+	case PENDING:
+		return PENDING, nil
+	default:
+		return tts.ReturnData.RequestStatus,
+			fmt.Errorf("XTB TradeTransactionStatus unknown response requestStatus: %d, message: %s",
+				tts.ReturnData.RequestStatus, tts.ReturnData.Message)
 	}
-	return nil
 }
