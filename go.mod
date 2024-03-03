@@ -1,4 +1,4 @@
-module trader
+module github.com/artufi/trader
 
 go 1.21
 
