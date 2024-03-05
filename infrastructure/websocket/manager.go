@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/artufi/trader/controller/middleware"
+	"github.com/artufi/trader/logging"
 	"github.com/gorilla/websocket"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
-	"trader/controller/middleware"
-	"trader/logging"
 )
 
 func NewWSManager(dialer *websocket.Dialer, logger *slog.Logger) *WSManager {

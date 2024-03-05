@@ -1,8 +1,8 @@
 package logging
 
 import (
+	"github.com/artufi/trader/model"
 	"log/slog"
-	"trader/model"
 )
 
 func URLAttr(url string) slog.Attr {

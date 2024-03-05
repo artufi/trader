@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"trader/infrastructure/websocket"
-	"trader/xtb/jsonform"
-	"trader/xtb/response"
+	"github.com/artufi/trader/infrastructure/websocket"
+	"github.com/artufi/trader/xtb/jsonform"
+	"github.com/artufi/trader/xtb/response"
 )
 
 func Logout(ctx context.Context, wsClient *websocket.WSClient) (response.General, error) {

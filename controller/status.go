@@ -2,12 +2,12 @@ package controller
 
 import (
 	"encoding/json"
+	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/infrastructure/websocket"
+	"github.com/artufi/trader/logging"
+	"github.com/artufi/trader/xtb/processor"
 	"log/slog"
 	"net/http"
-	"trader/config"
-	"trader/infrastructure/websocket"
-	"trader/logging"
-	"trader/xtb/processor"
 )
 
 func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {

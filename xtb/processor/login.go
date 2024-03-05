@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"trader/config"
-	"trader/infrastructure/websocket"
-	"trader/xtb/command"
-	"trader/xtb/jsonform"
-	"trader/xtb/response"
+	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/infrastructure/websocket"
+	"github.com/artufi/trader/xtb/command"
+	"github.com/artufi/trader/xtb/jsonform"
+	"github.com/artufi/trader/xtb/response"
 )
 
 func Login(ctx context.Context, cfg config.AppConfig, wsClient *websocket.WSClient) (response.General, error) {

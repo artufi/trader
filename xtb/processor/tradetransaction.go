@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"trader/infrastructure/websocket"
-	"trader/xtb/command"
-	"trader/xtb/jsonform"
-	"trader/xtb/response"
+	"github.com/artufi/trader/infrastructure/websocket"
+	"github.com/artufi/trader/xtb/command"
+	"github.com/artufi/trader/xtb/jsonform"
+	"github.com/artufi/trader/xtb/response"
 )
 
 func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo, wsClient *websocket.WSClient) (response.TradeTransaction, error) {

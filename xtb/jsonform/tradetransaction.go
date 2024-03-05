@@ -3,7 +3,7 @@ package jsonform
 import (
 	"encoding/json"
 	"fmt"
-	"trader/xtb/command"
+	"github.com/artufi/trader/xtb/command"
 )
 
 func TradeTransaction(tradeTransactionArgs command.TradeTransactionArgs) ([]byte, error) {

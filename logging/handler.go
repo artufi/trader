@@ -2,8 +2,8 @@ package logging
 
 import (
 	"context"
+	"github.com/artufi/trader/controller/middleware"
 	"log/slog"
-	"trader/controller/middleware"
 )
 
 type LogHandler struct {

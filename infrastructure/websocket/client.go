@@ -3,10 +3,10 @@ package websocket
 import (
 	"context"
 	"fmt"
+	"github.com/artufi/trader/logging"
 	"github.com/gorilla/websocket"
 	"log/slog"
 	"time"
-	"trader/logging"
 )
 
 const readTimeout = 10

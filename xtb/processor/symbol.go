@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/artufi/trader/infrastructure/websocket"
+	"github.com/artufi/trader/xtb/command"
+	"github.com/artufi/trader/xtb/jsonform"
+	"github.com/artufi/trader/xtb/response"
 	"strings"
-	"trader/infrastructure/websocket"
-	"trader/xtb/command"
-	"trader/xtb/jsonform"
-	"trader/xtb/response"
 )
 
 func GetSymbolExtended(ctx context.Context, symbol string, wsClient *websocket.WSClient) (response.GetSymbolExtended, error) {

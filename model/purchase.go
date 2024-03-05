@@ -2,10 +2,10 @@ package model
 
 import (
 	"fmt"
+	"github.com/artufi/trader/xtb/command"
+	"github.com/artufi/trader/xtb/response"
 	"math"
 	"time"
-	"trader/xtb/command"
-	"trader/xtb/response"
 )
 
 // TODO what about other values?

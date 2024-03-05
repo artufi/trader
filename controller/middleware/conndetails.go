@@ -2,10 +2,10 @@ package middleware
 
 import (
 	"context"
+	"github.com/artufi/trader/config"
 	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
-	"trader/config"
 )
 
 type connDetailsKey string

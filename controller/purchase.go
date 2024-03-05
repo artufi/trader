@@ -2,13 +2,13 @@ package controller
 
 import (
 	"encoding/json"
+	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/infrastructure/websocket"
+	"github.com/artufi/trader/logging"
+	"github.com/artufi/trader/model"
+	"github.com/artufi/trader/xtb/processor"
 	"log/slog"
 	"net/http"
-	"trader/config"
-	"trader/infrastructure/websocket"
-	"trader/logging"
-	"trader/model"
-	"trader/xtb/processor"
 )
 
 func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
@@ -114,7 +114,7 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
 			}
-			err = tradeResponseStatus.CheckRequestStatus()
+			_, err = tradeResponseStatus.CheckRequestStatus()
 			if err != nil {
 				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
 					logging.ErrorAttr(err),

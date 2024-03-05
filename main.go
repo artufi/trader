@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/controller"
+	"github.com/artufi/trader/controller/middleware"
+	"github.com/artufi/trader/infrastructure/websocket"
+	"github.com/artufi/trader/logging"
 	"github.com/go-chi/chi/v5"
 	ws "github.com/gorilla/websocket"
 	"log/slog"
 	"net/http"
-	"trader/config"
-	"trader/controller"
-	"trader/controller/middleware"
-	"trader/infrastructure/websocket"
-	"trader/logging"
 )
 
 var env = "dev"
