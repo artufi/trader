@@ -4,7 +4,7 @@ import "fmt"
 
 type TradeTransaction struct {
 	Status          bool   `json:"status"`
-	StreamSessionId string `json:"streamSessionId"`
+	StreamSessionId string `json:"streamSessionId,omitempty"`
 	ReturnData      struct {
 		Order int `json:"order"`
 	} `json:"returnData"`
@@ -22,7 +22,7 @@ func (tt TradeTransaction) CheckStatus() error {
 
 type TradeTransactionStatus struct {
 	Status          bool   `json:"status"`
-	StreamSessionId string `json:"streamSessionId"`
+	StreamSessionId string `json:"streamSessionId,omitempty"`
 	ReturnData      struct {
 		Ask           float64       `json:"ask"`
 		Bid           float64       `json:"bid"`

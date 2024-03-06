@@ -4,7 +4,7 @@ import "fmt"
 
 type General struct {
 	Status          bool                   `json:"status"`
-	StreamSessionId string                 `json:"streamSessionId"`
+	StreamSessionId string                 `json:"streamSessionId,omitempty"`
 	ReturnData      map[string]interface{} `json:"returnData,omitempty"`
 	ErrorCode       string                 `json:"errorCode,omitempty"`
 	ErrorDescr      string                 `json:"errorDescr,omitempty"`

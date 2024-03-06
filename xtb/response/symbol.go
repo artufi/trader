@@ -3,8 +3,9 @@ package response
 import "fmt"
 
 type GetSymbol struct {
-	Status     bool `json:"status"`
-	ReturnData struct {
+	Status          bool   `json:"status"`
+	StreamSessionId string `json:"streamSessionId,omitempty"`
+	ReturnData      struct {
 		Symbol            string      `json:"symbol"`
 		Currency          string      `json:"currency"`
 		ContractSize      int         `json:"contractSize"`
@@ -46,8 +47,9 @@ func (gs GetSymbol) CheckStatus() error {
 }
 
 type GetSymbolExtended struct {
-	Status     bool `json:"status"`
-	ReturnData struct {
+	Status          bool   `json:"status"`
+	StreamSessionId string `json:"streamSessionId,omitempty"`
+	ReturnData      struct {
 		Symbol             string      `json:"symbol"`
 		Currency           string      `json:"currency"`
 		CategoryName       string      `json:"categoryName"`
