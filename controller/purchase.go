@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/controller/middleware"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/model"
@@ -16,6 +17,14 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		ctx := r.Context()
 		logger.InfoContext(ctx, "Start processing purchase request")
 
+		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
+		if !ok {
+			logger.ErrorContext(ctx, "Failed to get ConnDetails")
+			http.Error(w, "Unspecified parameters", http.StatusBadRequest)
+			return
+		}
+		traceID := connDetails.TraceID.String()
+
 		wsClient, err := wsManager.DialForNewClient(ctx, cfg.XTB.Demo.WebSocketURL, nil)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
@@ -28,7 +37,15 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		go wsClient.ReadMessages(ctx)
 
 		// log user into XTB
-		loginResponse, err := processor.Login(ctx, cfg, wsClient)
+		lCustomTag := traceID + "login"
+		loginResponse, err := processor.Login(ctx, cfg, wsClient, lCustomTag)
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
+			wsManager.RemoveClient(ctx, wsClient)
+			http.Error(w, "Failed to login", http.StatusInternalServerError)
+			return
+		}
+		err = loginResponse.CheckCustomTag(lCustomTag)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
@@ -58,9 +75,17 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 			logger.InfoContext(ctx, "Will process purchase instruction", logging.PurchaseInstrAttr(purchaseInstruction))
 
 			// get symbol details
-			symbolResponse, err := processor.GetSymbolExtended(ctx, purchaseInstruction.Symbol, wsClient)
+			gsCustomTag := traceID + "getSymbol"
+			symbolResponse, err := processor.GetSymbolExtended(ctx, purchaseInstruction.Symbol, wsClient, gsCustomTag)
 			if err != nil {
 				logger.WarnContext(ctx, "Failed to process GetSymbol",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(purchaseInstruction.Symbol))
+				continue
+			}
+			err = symbolResponse.CheckCustomTag(gsCustomTag)
+			if err != nil {
+				logger.ErrorContext(ctx, "Failed to process GetSymbol",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
@@ -83,9 +108,17 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 			}
 
 			// process TradeTransaction
-			tradeResponse, err := processor.TradeTransaction(ctx, tradeTransInfo, wsClient)
+			ttCustomTag := traceID + "tradeTransaction"
+			tradeResponse, err := processor.TradeTransaction(ctx, tradeTransInfo, wsClient, ttCustomTag)
 			if err != nil {
 				logger.WarnContext(ctx, "Failed to process TradeTransaction",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(purchaseInstruction.Symbol))
+				continue
+			}
+			err = tradeResponse.CheckCustomTag(ttCustomTag)
+			if err != nil {
+				logger.ErrorContext(ctx, "Failed to process TradeTransaction",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
@@ -100,9 +133,18 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 			logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeResponse))
 
 			// tradeTransactionStatus
-			tradeResponseStatus, err := processor.TradeTransactionStatus(ctx, tradeResponse.ReturnData.Order, wsClient)
+			ttsCustomTag := traceID + "tradeTransactionStatus"
+			tradeResponseStatus, err := processor.TradeTransactionStatus(ctx, tradeResponse.ReturnData.Order, wsClient,
+				ttsCustomTag)
 			if err != nil {
 				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(purchaseInstruction.Symbol))
+				continue
+			}
+			err = tradeResponseStatus.CheckCustomTag(ttsCustomTag)
+			if err != nil {
+				logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
@@ -116,15 +158,19 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 			}
 			_, err = tradeResponseStatus.CheckRequestStatus()
 			if err != nil {
-				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
+				logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(purchaseInstruction.Symbol))
 				continue
 			}
 			logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
+
+			//if reqStatus == response.ACCEPTED || reqStatus == response.PENDING || reqStatus == response.REJECTED {
+			//	go sendPing(ctx, wsClient, logger, 5)
+			//}
 		}
 
-		logoutResponse, err := processor.Logout(ctx, wsClient)
+		logoutResponse, err := processor.Logout(ctx, wsClient, traceID+"logout")
 		if err != nil {
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
