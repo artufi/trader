@@ -6,10 +6,11 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
-func TradeTransaction(tradeTransactionArgs command.TradeTransactionArgs) ([]byte, error) {
+func TradeTransaction(tradeTransactionArgs command.TradeTransactionArgs, customTag string) ([]byte, error) {
 	tradeTransaction := command.TradeTransaction{
 		Command:   "tradeTransaction",
 		Arguments: tradeTransactionArgs,
+		CustomTag: customTag,
 	}
 	transactionJSON, err := json.Marshal(tradeTransaction)
 	if err != nil {
@@ -18,9 +19,10 @@ func TradeTransaction(tradeTransactionArgs command.TradeTransactionArgs) ([]byte
 	return transactionJSON, nil
 }
 
-func TradeTransactionStatus(orderNo int) ([]byte, error) {
+func TradeTransactionStatus(orderNo int, customTag string) ([]byte, error) {
 	tradeTransactionStatus := command.TradeTransactionStatus{
-		Command: "tradeTransactionStatus",
+		Command:   "tradeTransactionStatus",
+		CustomTag: customTag,
 	}
 	tradeTransactionStatus.Arguments.Order = orderNo
 	transactionStatusJSON, err := json.Marshal(tradeTransactionStatus)

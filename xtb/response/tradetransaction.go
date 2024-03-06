@@ -10,12 +10,21 @@ type TradeTransaction struct {
 	} `json:"returnData"`
 	ErrorCode  string `json:"errorCode,omitempty"`
 	ErrorDescr string `json:"errorDescr,omitempty"`
+	CustomTag  string `json:"customTag"`
 }
 
 func (tt TradeTransaction) CheckStatus() error {
 	if !tt.Status {
 		return fmt.Errorf("XTB response TradeTransaction status: %t, errorCode: %s, errorDescr: %s",
 			tt.Status, tt.ErrorCode, tt.ErrorDescr)
+	}
+	return nil
+}
+
+func (tt TradeTransaction) CheckCustomTag(customTag string) error {
+	if tt.CustomTag != customTag {
+		return fmt.Errorf("XTB response TradeTransaction customTag is not equal, expected: %s, got: %s",
+			customTag, tt.CustomTag)
 	}
 	return nil
 }
@@ -33,6 +42,7 @@ type TradeTransactionStatus struct {
 	} `json:"returnData"`
 	ErrorCode  string `json:"errorCode,omitempty"`
 	ErrorDescr string `json:"errorDescr,omitempty"`
+	CustomTag  string `json:"customTag"`
 }
 
 type RequestStatus int
@@ -55,6 +65,14 @@ func (tts TradeTransactionStatus) CheckStatus() error {
 	if !tts.Status {
 		return fmt.Errorf("XTB TradeTransactionStatus response requestStatus: %t, errorCode: %s, errorDescr: %s",
 			tts.Status, tts.ErrorCode, tts.ErrorDescr)
+	}
+	return nil
+}
+
+func (tts TradeTransactionStatus) CheckCustomTag(customTag string) error {
+	if tts.CustomTag != customTag {
+		return fmt.Errorf("XTB response TradeTransactionStatus customTag is not equal, expected: %s, got: %s",
+			customTag, tts.CustomTag)
 	}
 	return nil
 }

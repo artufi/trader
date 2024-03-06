@@ -6,10 +6,11 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
-func Login(loginArgs command.LoginArgs) ([]byte, error) {
+func Login(loginArgs command.LoginArgs, customTag string) ([]byte, error) {
 	login := command.Login{
 		Command:   "login",
 		Arguments: loginArgs,
+		CustomTag: customTag,
 	}
 	loginJSON, err := json.Marshal(login)
 	if err != nil {

@@ -9,8 +9,8 @@ import (
 	"github.com/artufi/trader/xtb/response"
 )
 
-func Logout(ctx context.Context, wsClient *websocket.WSClient) (response.General, error) {
-	logoutJSON, err := jsonform.Logout()
+func Logout(ctx context.Context, wsClient *websocket.WSClient, customTag string) (response.General, error) {
+	logoutJSON, err := jsonform.Logout(customTag)
 	if err != nil {
 		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
 	}

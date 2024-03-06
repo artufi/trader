@@ -10,9 +10,12 @@ import (
 	"github.com/artufi/trader/xtb/response"
 )
 
-func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo, wsClient *websocket.WSClient) (response.TradeTransaction, error) {
-	tradeTransactionJSON, err := jsonform.TradeTransaction(command.TradeTransactionArgs{
-		TradeTransInfo: tradeTransInfo})
+func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo, wsClient *websocket.WSClient, customTag string) (response.TradeTransaction, error) {
+	tradeTransactionJSON, err := jsonform.TradeTransaction(
+		command.TradeTransactionArgs{
+			TradeTransInfo: tradeTransInfo,
+		},
+		customTag)
 	if err != nil {
 		return response.TradeTransaction{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
 	}
@@ -29,8 +32,8 @@ func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo
 	return wsTradeTransResp, err
 }
 
-func TradeTransactionStatus(ctx context.Context, orderNo int, wsClient *websocket.WSClient) (response.TradeTransactionStatus, error) {
-	tradeTransactionStatusJSON, err := jsonform.TradeTransactionStatus(orderNo)
+func TradeTransactionStatus(ctx context.Context, orderNo int, wsClient *websocket.WSClient, customTag string) (response.TradeTransactionStatus, error) {
+	tradeTransactionStatusJSON, err := jsonform.TradeTransactionStatus(orderNo, customTag)
 	if err != nil {
 		return response.TradeTransactionStatus{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
 	}

@@ -8,12 +8,21 @@ type General struct {
 	ReturnData      map[string]interface{} `json:"returnData,omitempty"`
 	ErrorCode       string                 `json:"errorCode,omitempty"`
 	ErrorDescr      string                 `json:"errorDescr,omitempty"`
+	CustomTag       string                 `json:"customTag"`
 }
 
-func (gr General) CheckStatus() error {
-	if !gr.Status {
-		return fmt.Errorf("XTB General response status: %t, errorCode: %s, errorDescr: %s",
-			gr.Status, gr.ErrorCode, gr.ErrorDescr)
+func (g General) CheckStatus() error {
+	if !g.Status {
+		return fmt.Errorf("XTB response General status: %t, errorCode: %s, errorDescr: %s",
+			g.Status, g.ErrorCode, g.ErrorDescr)
+	}
+	return nil
+}
+
+func (g General) CheckCustomTag(customTag string) error {
+	if g.CustomTag != customTag {
+		return fmt.Errorf("XTB response General customTag is not equal, expected: %s, got: %s",
+			customTag, g.CustomTag)
 	}
 	return nil
 }

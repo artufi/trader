@@ -6,9 +6,10 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
-func Logout() ([]byte, error) {
+func Logout(customTag string) ([]byte, error) {
 	logout := command.Logout{
-		Command: "logout",
+		Command:   "logout",
+		CustomTag: customTag,
 	}
 	logoutJSON, err := json.Marshal(logout)
 	if err != nil {

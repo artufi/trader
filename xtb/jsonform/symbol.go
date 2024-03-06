@@ -6,10 +6,11 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
-func GetSymbol(getSymbolArgs command.GetSymbolArgs) ([]byte, error) {
+func GetSymbol(getSymbolArgs command.GetSymbolArgs, customTag string) ([]byte, error) {
 	getSymbol := command.GetSymbol{
 		Command:   "getSymbol",
 		Arguments: getSymbolArgs,
+		CustomTag: customTag,
 	}
 	getSymbolJSON, err := json.Marshal(getSymbol)
 	if err != nil {

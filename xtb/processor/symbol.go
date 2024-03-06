@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-func GetSymbolExtended(ctx context.Context, symbol string, wsClient *websocket.WSClient) (response.GetSymbolExtended, error) {
-	symbolJSON, err := jsonform.GetSymbol(command.GetSymbolArgs{
-		Symbol: strings.ToUpper(symbol),
-	})
+func GetSymbolExtended(ctx context.Context, symbol string, wsClient *websocket.WSClient, customTag string) (response.GetSymbolExtended, error) {
+	symbolJSON, err := jsonform.GetSymbol(
+		command.GetSymbolArgs{Symbol: strings.ToUpper(symbol)},
+		customTag)
 	if err != nil {
 		return response.GetSymbolExtended{}, fmt.Errorf("XTB GetSymbol procesor: %w", err)
 	}
