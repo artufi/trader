@@ -11,11 +11,7 @@ import (
 )
 
 func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo, wsClient *websocket.WSClient, customTag string) (response.TradeTransaction, error) {
-	tradeTransactionJSON, err := jsonform.TradeTransaction(
-		command.TradeTransactionArgs{
-			TradeTransInfo: tradeTransInfo,
-		},
-		customTag)
+	tradeTransactionJSON, err := jsonform.TradeTransaction(tradeTransInfo, customTag)
 	if err != nil {
 		return response.TradeTransaction{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
 	}

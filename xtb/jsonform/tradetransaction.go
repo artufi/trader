@@ -6,12 +6,12 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
-func TradeTransaction(tradeTransactionArgs command.TradeTransactionArgs, customTag string) ([]byte, error) {
+func TradeTransaction(tradeTransInfo command.TradeTransInfo, customTag string) ([]byte, error) {
 	tradeTransaction := command.TradeTransaction{
 		Command:   "tradeTransaction",
-		Arguments: tradeTransactionArgs,
 		CustomTag: customTag,
 	}
+	tradeTransaction.Arguments.TradeTransactionArgs.TradeTransInfo = tradeTransInfo
 	transactionJSON, err := json.Marshal(tradeTransaction)
 	if err != nil {
 		return nil, fmt.Errorf("serialize TradeTransaction command: %w", err)

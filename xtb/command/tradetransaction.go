@@ -1,13 +1,13 @@
 package command
 
 type TradeTransaction struct {
-	Command   string               `json:"command"`
-	Arguments TradeTransactionArgs `json:"arguments"`
-	CustomTag string               `json:"customTag"`
-}
-
-type TradeTransactionArgs struct {
-	TradeTransInfo TradeTransInfo `json:"tradeTransInfo"`
+	Command   string `json:"command"`
+	Arguments struct {
+		TradeTransactionArgs struct {
+			TradeTransInfo TradeTransInfo `json:"tradeTransInfo"`
+		} `json:"tradeTransactionArgs"`
+	} `json:"arguments"`
+	CustomTag string `json:"customTag"`
 }
 
 type transactionType int
