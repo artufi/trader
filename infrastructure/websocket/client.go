@@ -52,7 +52,6 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 		// close and delete call from pending map
 		wsc.mutex.Lock()
 		for _, c := range wsc.pending {
-			fmt.Println(c)
 			close(c.Done)
 			delete(wsc.pending, c.ID)
 		}
