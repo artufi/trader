@@ -11,7 +11,7 @@ func TradeTransaction(tradeTransInfo command.TradeTransInfo, customTag string) (
 		Command:   "tradeTransaction",
 		CustomTag: customTag,
 	}
-	tradeTransaction.Arguments.TradeTransactionArgs.TradeTransInfo = tradeTransInfo
+	tradeTransaction.Arguments.TradeTransInfo = tradeTransInfo
 	transactionJSON, err := json.Marshal(tradeTransaction)
 	if err != nil {
 		return nil, fmt.Errorf("serialize TradeTransaction command: %w", err)

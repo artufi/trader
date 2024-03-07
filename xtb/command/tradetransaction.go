@@ -3,9 +3,7 @@ package command
 type TradeTransaction struct {
 	Command   string `json:"command"`
 	Arguments struct {
-		TradeTransactionArgs struct {
-			TradeTransInfo TradeTransInfo `json:"tradeTransInfo"`
-		} `json:"tradeTransactionArgs"`
+		TradeTransInfo TradeTransInfo `json:"tradeTransInfo"`
 	} `json:"arguments"`
 	CustomTag string `json:"customTag"`
 }
