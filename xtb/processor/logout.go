@@ -15,7 +15,7 @@ func Logout(ctx context.Context, wsClient *websocket.WSClient, customTag string)
 		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
 	}
 
-	resp, err := wsClient.WriteText(ctx, logoutJSON)
+	resp, err := wsClient.WriteText(ctx, customTag, logoutJSON)
 	if err != nil {
 		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
 	}

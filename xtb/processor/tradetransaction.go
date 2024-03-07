@@ -16,7 +16,7 @@ func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo
 		return response.TradeTransaction{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
 	}
 
-	resp, err := wsClient.WriteText(ctx, tradeTransactionJSON)
+	resp, err := wsClient.WriteText(ctx, customTag, tradeTransactionJSON)
 	if err != nil {
 		return response.TradeTransaction{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
 	}
@@ -34,7 +34,7 @@ func TradeTransactionStatus(ctx context.Context, orderNo int, wsClient *websocke
 		return response.TradeTransactionStatus{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
 	}
 
-	resp, err := wsClient.WriteText(ctx, tradeTransactionStatusJSON)
+	resp, err := wsClient.WriteText(ctx, customTag, tradeTransactionStatusJSON)
 	if err != nil {
 		return response.TradeTransactionStatus{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
 	}

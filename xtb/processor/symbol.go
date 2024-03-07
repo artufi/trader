@@ -19,7 +19,7 @@ func GetSymbolExtended(ctx context.Context, symbol string, wsClient *websocket.W
 		return response.GetSymbolExtended{}, fmt.Errorf("XTB GetSymbol procesor: %w", err)
 	}
 
-	resp, err := wsClient.WriteText(ctx, symbolJSON)
+	resp, err := wsClient.WriteText(ctx, customTag, symbolJSON)
 	if err != nil {
 		return response.GetSymbolExtended{}, fmt.Errorf("XTB GetSymbol procesor: %w", err)
 	}

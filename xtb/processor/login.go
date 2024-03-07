@@ -22,7 +22,7 @@ func Login(ctx context.Context, cfg config.AppConfig, wsClient *websocket.WSClie
 		return response.General{}, fmt.Errorf("XTB Login processor: %w", err)
 	}
 
-	resp, err := wsClient.WriteText(ctx, loginJSON)
+	resp, err := wsClient.WriteText(ctx, customTag, loginJSON)
 	if err != nil {
 		return response.General{}, fmt.Errorf("XTB Login processor: %w", err)
 	}
