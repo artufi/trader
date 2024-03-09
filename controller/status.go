@@ -71,8 +71,8 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 			return
 		}
 
-		// tradeTransactionStatus
-		ttsCustomTag := traceID + "tradeTransactionStatus"
+		// process tradeTransactionStatus
+		ttsCustomTag := traceID + "tts"
 		tradeResponseStatus, err := processor.TradeTransactionStatus(ctx, order.Number, wsClient, ttsCustomTag)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
@@ -102,5 +102,23 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
+
+		// logout user after processing
+		logoutCustomTag := traceID + "logout"
+		logoutResponse, err := processor.Logout(ctx, wsClient, logoutCustomTag)
+		if err != nil {
+			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
+			wsManager.RemoveClient(ctx, wsClient)
+			return
+		}
+		err = logoutResponse.CheckStatus()
+		if err != nil {
+			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
+			wsManager.RemoveClient(ctx, wsClient)
+			return
+		}
+		logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
+
+		logger.Info("Transaction Status request fully processed")
 	}
 }
