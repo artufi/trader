@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// TODO what about other values?
 type PurchaseInstruction struct {
 	Symbol     string  `json:"symbol"`
 	Date       string  `json:"date"`
@@ -25,7 +24,7 @@ type PurchaseInstruction struct {
 
 func (pi PurchaseInstruction) PrepareTradeTransInfo(symbolData response.GetSymbolExtended, symbolBaseVolume float64, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// TODO what if 0?
-	if pi.TakeProfit > 0 {
+	if pi.TakeProfit >= 0 {
 		return pi.PrepareBUYTradeTransInfo(symbolData, symbolBaseVolume, volumeToBuy)
 	}
 	return pi.PrepareSELLTradeTransInfo(symbolData, symbolBaseVolume, volumeToBuy)
