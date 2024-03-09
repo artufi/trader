@@ -1,6 +1,0 @@
-XTB:
-  demo:
-    websocketURL: "wss://ws.xtb.com/demo"
-testing:
-  userID: ""
-  password: ""
