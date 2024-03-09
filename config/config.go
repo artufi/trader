@@ -5,10 +5,16 @@ type AppConfig struct {
 		Demo struct {
 			WebSocketURL    string `yaml:"websocketURL"`
 			WebSocketTLSURL string `yaml:"websocketTLSURL"`
+
+			UserID   string `yaml:"userID"`
+			Password string `yaml:"password"`
 		} `yaml:"demo"`
 	} `yaml:"XTB"`
-	Testing struct {
-		UserID   string `yaml:"userID"`
-		Password string `yaml:"password"`
-	} `yaml:"testing"`
+}
+
+func MustLoad(cfg AppConfig, err error) AppConfig {
+	if err != nil {
+		panic(err)
+	}
+	return cfg
 }

@@ -15,7 +15,7 @@ func Login(ctx context.Context, cfg config.AppConfig, wsClient *websocket.WSClie
 	loginJSON, err := jsonform.Login(
 		command.LoginArgs{
 			UserID:   wsClient.GetUserID(),
-			Password: cfg.Testing.Password,
+			Password: cfg.XTB.Demo.Password,
 		},
 		customTag)
 	if err != nil {

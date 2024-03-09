@@ -27,7 +27,7 @@ func ConnDetailsMiddleware(cfg config.AppConfig, logger *slog.Logger) func(http.
 			connDetails := ConnDetails{
 				TraceID: traceID,
 				IPAddr:  ipAddr,
-				UserID:  cfg.Testing.UserID,
+				UserID:  cfg.XTB.Demo.UserID,
 			}
 
 			ctx := context.WithValue(r.Context(), ConnDetailsKey, connDetails)
