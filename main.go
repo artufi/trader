@@ -13,7 +13,8 @@ import (
 )
 
 func main() {
-	cfg := config.MustLoad(config.LoadDotEnvConfig("config/.env"))
+	loader := config.DotEnvCfg{Filename: "config/.env"}
+	cfg := config.MustLoad(loader)
 
 	logFile := logging.Must(logging.GetLogFile("app.log"))
 	logger := slog.New(logging.LogHandler{Handler: slog.NewJSONHandler(logFile, nil)})

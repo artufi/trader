@@ -12,7 +12,12 @@ type AppConfig struct {
 	} `yaml:"XTB"`
 }
 
-func MustLoad(cfg AppConfig, err error) AppConfig {
+type Loader interface {
+	Load() (AppConfig, error)
+}
+
+func MustLoad(loader Loader) AppConfig {
+	cfg, err := loader.Load()
 	if err != nil {
 		panic(err)
 	}
