@@ -37,15 +37,15 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		go wsClient.ReadMessages(ctx)
 
 		// log user into XTB
-		lCustomTag := traceID + "login"
-		loginResponse, err := processor.Login(ctx, cfg, wsClient, lCustomTag)
+		loginCustomTag := traceID + "login"
+		loginResponse, err := processor.Login(ctx, cfg, wsClient, loginCustomTag)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, "Failed to login", http.StatusInternalServerError)
 			return
 		}
-		err = loginResponse.CheckCustomTag(lCustomTag)
+		err = loginResponse.CheckCustomTag(loginCustomTag)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
@@ -173,7 +173,8 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		}
 
 		// logout user after processing
-		logoutResponse, err := processor.Logout(ctx, wsClient, traceID+"logout")
+		logoutCustomTag := traceID + "logout"
+		logoutResponse, err := processor.Logout(ctx, wsClient, logoutCustomTag)
 		if err != nil {
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
