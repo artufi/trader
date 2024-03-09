@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/controller"
 	"github.com/artufi/trader/controller/middleware"
@@ -13,14 +12,11 @@ import (
 	"net/http"
 )
 
-var env = "dev"
-
 func main() {
+	cfg := config.MustLoad(config.LoadDotEnvConfig("config/.env"))
+
 	logFile := logging.Must(logging.GetLogFile("app.log"))
 	logger := slog.New(logging.LogHandler{Handler: slog.NewJSONHandler(logFile, nil)})
-
-	cfg := config.AppConfig{}
-	config.Must(config.LoadFSYAMLConf(config.FSAppConfig, fmt.Sprintf("cfg-%s.yaml", env), &cfg))
 
 	dialer := &ws.Dialer{}
 	wsManager := websocket.NewWSManager(dialer, logger)
