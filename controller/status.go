@@ -35,9 +35,12 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		// read client messages
 		go wsClient.ReadMessages(ctx)
 
+		// init processor
+		proc := processor.Proc{Client: wsClient}
+
 		// log user into XTB
 		lCustomTag := traceID + "login"
-		loginResponse, err := processor.Login(ctx, cfg, wsClient, lCustomTag)
+		loginResponse, err := proc.Login(ctx, lCustomTag, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
@@ -73,7 +76,7 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 
 		// process tradeTransactionStatus
 		ttsCustomTag := traceID + "tts"
-		tradeResponseStatus, err := processor.TradeTransactionStatus(ctx, order.Number, wsClient, ttsCustomTag)
+		tradeResponseStatus, err := proc.TradeTransactionStatus(ctx, order.Number, ttsCustomTag)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
@@ -105,7 +108,7 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 
 		// logout user after processing
 		logoutCustomTag := traceID + "logout"
-		logoutResponse, err := processor.Logout(ctx, wsClient, logoutCustomTag)
+		logoutResponse, err := proc.Logout(ctx, logoutCustomTag)
 		if err != nil {
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
