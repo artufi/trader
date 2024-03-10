@@ -10,6 +10,42 @@ import (
 	"github.com/artufi/trader/xtb/response"
 )
 
+func (p Proc) TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo, customTag string) (response.TradeTransaction, error) {
+	tradeTransactionJSON, err := jsonform.TradeTransaction(tradeTransInfo, customTag)
+	if err != nil {
+		return response.TradeTransaction{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
+	}
+
+	resp, err := p.Client.WriteText(ctx, customTag, tradeTransactionJSON)
+	if err != nil {
+		return response.TradeTransaction{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
+	}
+
+	wsTradeTransResp := response.TradeTransaction{}
+	if err := json.Unmarshal(resp, &wsTradeTransResp); err != nil {
+		return response.TradeTransaction{}, fmt.Errorf("XTB TradeTransaction processor: %w", err)
+	}
+	return wsTradeTransResp, err
+}
+
+func (p Proc) TradeTransactionStatus(ctx context.Context, orderNo int, customTag string) (response.TradeTransactionStatus, error) {
+	tradeTransactionStatusJSON, err := jsonform.TradeTransactionStatus(orderNo, customTag)
+	if err != nil {
+		return response.TradeTransactionStatus{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
+	}
+
+	resp, err := p.Client.WriteText(ctx, customTag, tradeTransactionStatusJSON)
+	if err != nil {
+		return response.TradeTransactionStatus{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
+	}
+
+	wsTradeTransResp := response.TradeTransactionStatus{}
+	if err := json.Unmarshal(resp, &wsTradeTransResp); err != nil {
+		return response.TradeTransactionStatus{}, fmt.Errorf("XTB TradeTransactionStatus processor: %w", err)
+	}
+	return wsTradeTransResp, err
+}
+
 func TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo, wsClient *websocket.WSClient, customTag string) (response.TradeTransaction, error) {
 	tradeTransactionJSON, err := jsonform.TradeTransaction(tradeTransInfo, customTag)
 	if err != nil {
