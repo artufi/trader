@@ -2,7 +2,6 @@ package processor
 
 import (
 	"context"
-	"fmt"
 	"github.com/artufi/trader/xtb/command"
 	"github.com/artufi/trader/xtb/jsonform"
 	"github.com/artufi/trader/xtb/response"
@@ -18,8 +17,8 @@ func (p Proc) Login(ctx context.Context, customTag, userID, password string) (re
 		},
 		customTag)
 	if err != nil {
-		return response.General{}, fmt.Errorf("XTB %s processor: %w", loginProc, err)
+		return response.General{}, &ProcError{Processor: loginProc, Err: err}
 	}
 
-	return process[response.General](ctx, p.Client, customTag, loginJSON, loginProc)
+	return process[response.General](ctx, p.client, customTag, loginJSON, loginProc)
 }

@@ -10,8 +10,21 @@ type Client interface {
 	WriteText(ctx context.Context, id string, data []byte) ([]byte, error)
 }
 
+func NewProc(client Client) Proc {
+	return Proc{client: client}
+}
+
 type Proc struct {
-	Client Client
+	client Client
+}
+
+type ProcError struct {
+	Processor string
+	Err       error
+}
+
+func (p *ProcError) Error() string {
+	return fmt.Sprintf("processor %s: %v", p.Processor, p.Err)
 }
 
 func process[T any](ctx context.Context, client Client, id string, data []byte, processor string) (T, error) {
@@ -19,11 +32,11 @@ func process[T any](ctx context.Context, client Client, id string, data []byte, 
 
 	respBytes, err := client.WriteText(ctx, id, data)
 	if err != nil {
-		return result, fmt.Errorf("XTB %s processor: %w", processor, err)
+		return result, &ProcError{Processor: processor, Err: err}
 	}
 
 	if err := json.Unmarshal(respBytes, &result); err != nil {
-		return result, fmt.Errorf("XTB %s processor: %w", processor, err)
+		return result, &ProcError{Processor: processor, Err: err}
 	}
 
 	return result, err

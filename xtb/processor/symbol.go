@@ -2,7 +2,6 @@ package processor
 
 import (
 	"context"
-	"fmt"
 	"github.com/artufi/trader/xtb/command"
 	"github.com/artufi/trader/xtb/jsonform"
 	"github.com/artufi/trader/xtb/response"
@@ -16,8 +15,8 @@ func (p Proc) GetSymbolExtended(ctx context.Context, symbol string, customTag st
 		command.GetSymbolArgs{Symbol: strings.ToUpper(symbol)},
 		customTag)
 	if err != nil {
-		return response.GetSymbolExtended{}, fmt.Errorf("XTB %s procesor: %w", getSymbolExtProc, err)
+		return response.GetSymbolExtended{}, &ProcError{Processor: getSymbolExtProc, Err: err}
 	}
 
-	return process[response.GetSymbolExtended](ctx, p.Client, customTag, symbolJSON, getSymbolExtProc)
+	return process[response.GetSymbolExtended](ctx, p.client, customTag, symbolJSON, getSymbolExtProc)
 }
