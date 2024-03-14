@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/controller/middleware"
 	"github.com/artufi/trader/infrastructure/websocket"
@@ -32,33 +33,18 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 			return
 		}
 
-		// read client messages
-		go wsClient.ReadMessages(ctx)
-
 		// init processor
-		proc := processor.Proc{Client: wsClient}
+		h := Handler{
+			Proc:    processor.NewProc(wsClient),
+			TraceID: traceID,
+		}
 
 		// log user into XTB
-		lCustomTag := traceID + "login"
-		loginResponse, err := proc.Login(ctx, lCustomTag, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
+		loginResponse, err := h.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to login", http.StatusInternalServerError)
-			return
-		}
-		err = loginResponse.CheckCustomTag(lCustomTag)
-		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to login", http.StatusInternalServerError)
-			return
-		}
-		err = loginResponse.CheckStatus()
-		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to login", http.StatusInternalServerError)
+			logger.ErrorContext(ctx, "Failed to login")
+			http.Error(w, "Failed to login", http.StatusBadRequest)
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
@@ -68,56 +54,27 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		}{}
 		err = json.NewDecoder(r.Body).Decode(&order)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to read request body with purchase instruction", logging.ErrorAttr(err))
+			logger.ErrorContext(ctx, "Failed to read request body with order number", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to read body", http.StatusBadRequest)
+			http.Error(w, "Failed to read body, expected order number", http.StatusBadRequest)
 			return
 		}
 
-		// process tradeTransactionStatus
-		ttsCustomTag := traceID + "tts"
-		tradeResponseStatus, err := proc.TradeTransactionStatus(ctx, order.Number, ttsCustomTag)
+		// process TradeTransactionStatus
+		tradeResponseStatus, err := h.TradeTransactionStatus(ctx, "", order.Number)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to process TradeTransactionStatus", http.StatusBadRequest)
-			return
-		}
-		err = tradeResponseStatus.CheckCustomTag(ttsCustomTag)
-		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to process TradeTransactionStatus", http.StatusBadRequest)
-			return
-		}
-		err = tradeResponseStatus.CheckStatus()
-		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to process TradeTransactionStatus", http.StatusBadRequest)
-			return
-		}
-		_, err = tradeResponseStatus.CheckRequestStatus()
-		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to process TradeTransactionStatus", http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Unable to obtain transaction status for order: %d", order.Number), http.StatusBadRequest)
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
 
 		// logout user after processing
-		logoutCustomTag := traceID + "logout"
-		logoutResponse, err := proc.Logout(ctx, logoutCustomTag)
+		logoutResponse, err := h.Logout(ctx)
 		if err != nil {
-			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
-			return
-		}
-		err = logoutResponse.CheckStatus()
-		if err != nil {
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
