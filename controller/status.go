@@ -28,12 +28,13 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		wsClient, err := wsManager.DialForNewClient(ctx, cfg.XTB.Demo.WebSocketURL, nil)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, "Failed to establish connection", http.StatusInternalServerError)
 			return
 		}
+		defer func() {
+			wsManager.RemoveClient(ctx, wsClient)
+		}()
 
-		// init processor
 		h := Handler{
 			Proc:    processor.NewProc(wsClient),
 			TraceID: traceID,
@@ -42,7 +43,6 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		// log user into XTB
 		loginResponse, err := h.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
-			wsManager.RemoveClient(ctx, wsClient)
 			logger.ErrorContext(ctx, "Failed to login")
 			http.Error(w, "Failed to login", http.StatusBadRequest)
 			return
@@ -55,7 +55,6 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		err = json.NewDecoder(r.Body).Decode(&order)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to read request body with order number", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, "Failed to read body, expected order number", http.StatusBadRequest)
 			return
 		}
@@ -63,7 +62,6 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		// process TradeTransactionStatus
 		tradeResponseStatus, err := h.TradeTransactionStatus(ctx, "", order.Number)
 		if err != nil {
-			wsManager.RemoveClient(ctx, wsClient)
 			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
 			http.Error(w, fmt.Sprintf("Unable to obtain transaction status for order: %d", order.Number), http.StatusBadRequest)
 			return
@@ -73,7 +71,6 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		// logout user after processing
 		logoutResponse, err := h.Logout(ctx)
 		if err != nil {
-			wsManager.RemoveClient(ctx, wsClient)
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
 			return
 		}

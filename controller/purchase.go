@@ -28,10 +28,12 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		wsClient, err := wsManager.DialForNewClient(ctx, cfg.XTB.Demo.WebSocketURL, nil)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
 			http.Error(w, "Failed to establish client connection", http.StatusInternalServerError)
 			return
 		}
+		defer func() {
+			wsManager.RemoveClient(ctx, wsClient)
+		}()
 
 		h := Handler{
 			Proc:    processor.NewProc(wsClient),
@@ -41,7 +43,6 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		// log user into XTB
 		loginResponse, err := h.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
-			wsManager.RemoveClient(ctx, wsClient)
 			logger.ErrorContext(ctx, "Failed to login")
 			http.Error(w, "Failed to login", http.StatusBadRequest)
 			return
@@ -52,7 +53,6 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		purchaseInstructions := make([]model.PurchaseInstruction, 0)
 		err = json.NewDecoder(r.Body).Decode(&purchaseInstructions)
 		if err != nil {
-			wsManager.RemoveClient(ctx, wsClient)
 			logger.ErrorContext(ctx, "Failed to read request body with purchase instruction", logging.ErrorAttr(err))
 			http.Error(w, "Failed to read body", http.StatusBadRequest)
 			return
@@ -110,7 +110,6 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		// logout user after processing
 		logoutResponse, err := h.Logout(ctx)
 		if err != nil {
-			wsManager.RemoveClient(ctx, wsClient)
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
 			return
 		}
