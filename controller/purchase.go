@@ -20,7 +20,7 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
 		if !ok {
 			logger.ErrorContext(ctx, "Failed to get ConnDetails")
-			http.Error(w, "Unspecified parameters", http.StatusBadRequest)
+			http.Error(w, "Could not retrieve client details", http.StatusInternalServerError)
 			return
 		}
 		traceID := connDetails.TraceID.String()
@@ -29,37 +29,21 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to establish connection", http.StatusInternalServerError)
+			http.Error(w, "Failed to establish client connection", http.StatusInternalServerError)
 			return
 		}
 
-		// read client messages
-		go wsClient.ReadMessages(ctx)
-
-		// init processor
-		proc := processor.Proc{Client: wsClient}
+		h := Handler{
+			Proc:    processor.NewProc(wsClient),
+			TraceID: traceID,
+		}
 
 		// log user into XTB
-		loginCustomTag := traceID + "login"
-		loginResponse, err := proc.Login(ctx, loginCustomTag, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
+		loginResponse, err := h.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to login", http.StatusInternalServerError)
-			return
-		}
-		err = loginResponse.CheckCustomTag(loginCustomTag)
-		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to login", http.StatusInternalServerError)
-			return
-		}
-		err = loginResponse.CheckStatus()
-		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process Login", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
-			http.Error(w, "Failed to login", http.StatusInternalServerError)
+			logger.ErrorContext(ctx, "Failed to login")
+			http.Error(w, "Failed to login", http.StatusBadRequest)
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
@@ -68,8 +52,8 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		purchaseInstructions := make([]model.PurchaseInstruction, 0)
 		err = json.NewDecoder(r.Body).Decode(&purchaseInstructions)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to read request body with purchase instruction", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
+			logger.ErrorContext(ctx, "Failed to read request body with purchase instruction", logging.ErrorAttr(err))
 			http.Error(w, "Failed to read body", http.StatusBadRequest)
 			return
 		}
@@ -80,24 +64,9 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 			symbol := purchaseInstruction.Symbol
 
 			// get symbol details
-			gsCustomTag := traceID + "gse" + symbol
-			symbolResponse, err := proc.GetSymbolExtended(ctx, symbol, gsCustomTag)
-			if err != nil {
-				logger.WarnContext(ctx, "Failed to process GetSymbol",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
-				continue
-			}
-			err = symbolResponse.CheckCustomTag(gsCustomTag)
+			symbolResponse, err := h.GetSymbolExtended(ctx, symbol)
 			if err != nil {
 				logger.ErrorContext(ctx, "Failed to process GetSymbol",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
-				continue
-			}
-			err = symbolResponse.CheckStatus()
-			if err != nil {
-				logger.WarnContext(ctx, "Failed to process GetSymbol",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
 				continue
@@ -113,79 +82,36 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 			}
 
 			// process TradeTransaction
-			ttCustomTag := traceID + "tt" + symbol
-			tradeResponse, err := proc.TradeTransaction(ctx, tradeTransInfo, ttCustomTag)
-			if err != nil {
-				logger.WarnContext(ctx, "Failed to process TradeTransaction",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
-				continue
-			}
-			err = tradeResponse.CheckCustomTag(ttCustomTag)
+			tradeResponse, err := h.TradeTransaction(ctx, symbol, tradeTransInfo)
 			if err != nil {
 				logger.ErrorContext(ctx, "Failed to process TradeTransaction",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
 				continue
 			}
-			err = tradeResponse.CheckStatus()
-			if err != nil {
-				logger.WarnContext(ctx, "Failed to process TradeTransaction",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
-				continue
-			}
 			logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeResponse))
 
-			// process tradeTransactionStatus
-			ttsCustomTag := traceID + "tts" + symbol
-			tradeResponseStatus, err := proc.TradeTransactionStatus(ctx, tradeResponse.ReturnData.Order, ttsCustomTag)
-			if err != nil {
-				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
-				continue
-			}
-			err = tradeResponseStatus.CheckCustomTag(ttsCustomTag)
+			// process TradeTransactionStatus
+			tradeResponseStatus, err := h.TradeTransactionStatus(ctx, symbol, tradeResponse.ReturnData.Order)
 			if err != nil {
 				logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
 				continue
 			}
-			err = tradeResponseStatus.CheckStatus()
-			if err != nil {
-				logger.WarnContext(ctx, "Failed to process TradeTransactionStatus",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
-				continue
-			}
-			_, err = tradeResponseStatus.CheckRequestStatus()
-			if err != nil {
-				logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
-				continue
-			}
-			logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
 
+			//reqStatus, err := tradeResponseStatus.CheckRequestStatus()
 			//if reqStatus == response.ACCEPTED || reqStatus == response.PENDING || reqStatus == response.REJECTED {
 			//	go sendPing(ctx, wsClient, logger, 5)
 			//}
+			logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
 		}
 
 		// logout user after processing
-		logoutCustomTag := traceID + "logout"
-		logoutResponse, err := proc.Logout(ctx, logoutCustomTag)
+		logoutResponse, err := h.Logout(ctx)
 		if err != nil {
-			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
 			wsManager.RemoveClient(ctx, wsClient)
-			return
-		}
-		err = logoutResponse.CheckStatus()
-		if err != nil {
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
-			wsManager.RemoveClient(ctx, wsClient)
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
