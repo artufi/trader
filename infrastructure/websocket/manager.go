@@ -61,6 +61,9 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 
 	wsh.addClient(ctx, client)
 
+	// read client messages
+	go client.ReadMessages(ctx)
+
 	return client, nil
 }
 
