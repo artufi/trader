@@ -20,7 +20,7 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
 		if !ok {
 			logger.ErrorContext(ctx, "Failed to get ConnDetails")
-			http.Error(w, "Unspecified parameters", http.StatusBadRequest)
+			http.Error(w, "Could not retrieve client details", http.StatusInternalServerError)
 			return
 		}
 		traceID := connDetails.TraceID.String()
