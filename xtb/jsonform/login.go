@@ -6,15 +6,17 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
+const login = "login"
+
 func Login(loginArgs command.LoginArgs, customTag string) ([]byte, error) {
-	login := command.Login{
-		Command:   "login",
+	l := command.Login{
+		Command:   login,
 		Arguments: loginArgs,
 		CustomTag: customTag,
 	}
-	loginJSON, err := json.Marshal(login)
+	lJSON, err := json.Marshal(l)
 	if err != nil {
-		return nil, fmt.Errorf("serialize Login command: %w", err)
+		return nil, fmt.Errorf("serialize %s command: %w", login, err)
 	}
-	return loginJSON, nil
+	return lJSON, nil
 }

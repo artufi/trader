@@ -6,15 +6,17 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
+const getSymbol = "getSymbol"
+
 func GetSymbol(getSymbolArgs command.GetSymbolArgs, customTag string) ([]byte, error) {
-	getSymbol := command.GetSymbol{
-		Command:   "getSymbol",
+	gs := command.GetSymbol{
+		Command:   getSymbol,
 		Arguments: getSymbolArgs,
 		CustomTag: customTag,
 	}
-	getSymbolJSON, err := json.Marshal(getSymbol)
+	gsJSON, err := json.Marshal(gs)
 	if err != nil {
-		return nil, fmt.Errorf("serialize TradeTransaction command: %w", err)
+		return nil, fmt.Errorf("serialize %s command: %w", getSymbol, err)
 	}
-	return getSymbolJSON, nil
+	return gsJSON, nil
 }
