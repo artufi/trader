@@ -1,15 +1,19 @@
 package config
 
+import "github.com/artufi/trader/infrastructure/database"
+
 type AppConfig struct {
 	XTB struct {
 		Demo struct {
-			WebSocketURL    string `yaml:"websocketURL"`
-			WebSocketTLSURL string `yaml:"websocketTLSURL"`
+			WebSocketURL    string
+			WebSocketTLSURL string
 
-			UserID   string `yaml:"userID"`
-			Password string `yaml:"password"`
-		} `yaml:"demo"`
-	} `yaml:"XTB"`
+			UserID   string
+			Password string
+		}
+	}
+
+	Database database.PostgresConfig
 }
 
 type Loader interface {
