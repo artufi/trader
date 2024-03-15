@@ -43,7 +43,7 @@ func LoadFSYAMLConf(fsys fs.FS, name string, conf interface{}) error {
 
 type YamlCfg struct {
 	Filename string
-	FS       fs.ReadFileFS
+	FS       fs.FS
 }
 
 func (yc YamlCfg) Load() (AppConfig, error) {
