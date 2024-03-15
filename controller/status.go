@@ -43,7 +43,7 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		// log user into XTB
 		loginResponse, err := h.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to login")
+			logger.ErrorContext(ctx, "Failed to login", logging.ErrorAttr(err))
 			http.Error(w, "Failed to login", http.StatusBadRequest)
 			return
 		}
