@@ -52,7 +52,7 @@ func (pi PurchaseInstruction) PrepareBUYTradeTransInfo(symbolData response.GetSy
 	if pi.PredsProba >= 0.5 {
 		tradeTransInfo.Cmd = command.BUY
 	} else {
-		return command.TradeTransInfo{}, fmt.Errorf("preds_proba low value: %v", pi.PredsProba)
+		return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: preds_proba low value: %v", pi.PredsProba)
 	}
 	return tradeTransInfo, nil
 }
@@ -79,7 +79,7 @@ func (pi PurchaseInstruction) PrepareSELLTradeTransInfo(symbolData response.GetS
 	if pi.PredsProba >= 0.5 {
 		tradeTransInfo.Cmd = command.SELL
 	} else {
-		return command.TradeTransInfo{}, fmt.Errorf("preds_proba low value: %v", pi.PredsProba)
+		return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: preds_proba low value: %v", pi.PredsProba)
 	}
 	return tradeTransInfo, nil
 }
