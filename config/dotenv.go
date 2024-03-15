@@ -39,5 +39,12 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 	cfg.XTB.Demo.UserID = os.Getenv("USER_ID")
 	cfg.XTB.Demo.Password = os.Getenv("USER_PASSWORD")
 
+	cfg.Database.Host = os.Getenv("PSQL_HOST")
+	cfg.Database.Port = os.Getenv("PSQL_PORT")
+	cfg.Database.User = os.Getenv("PSQL_USER")
+	cfg.Database.Password = os.Getenv("PSQL_PASSWORD")
+	cfg.Database.Database = os.Getenv("PSQL_DATABASE")
+	cfg.Database.SSLMode = os.Getenv("PSQL_SSLMODE")
+
 	return cfg, nil
 }
