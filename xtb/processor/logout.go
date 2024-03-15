@@ -2,28 +2,17 @@ package processor
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/xtb/jsonform"
 	"github.com/artufi/trader/xtb/response"
 )
 
-func Logout(ctx context.Context, wsClient *websocket.WSClient, customTag string) (response.General, error) {
+const logoutProc = "Logout"
+
+func (p Proc) Logout(ctx context.Context, customTag string) (response.General, error) {
 	logoutJSON, err := jsonform.Logout(customTag)
 	if err != nil {
-		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
+		return response.General{}, &ProcError{Processor: logoutProc, Err: err}
 	}
 
-	resp, err := wsClient.WriteText(ctx, customTag, logoutJSON)
-	if err != nil {
-		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
-	}
-
-	wsLogoutResp := response.General{}
-	if err := json.Unmarshal(resp, &wsLogoutResp); err != nil {
-		return response.General{}, fmt.Errorf("XTB Logout processor: %w", err)
-	}
-
-	return wsLogoutResp, err
+	return process[response.General](ctx, p.client, customTag, logoutJSON, logoutProc)
 }

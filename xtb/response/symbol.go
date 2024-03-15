@@ -1,7 +1,5 @@
 package response
 
-import "fmt"
-
 type GetSymbol struct {
 	Status          bool   `json:"status"`
 	StreamSessionId string `json:"streamSessionId,omitempty"`
@@ -41,16 +39,21 @@ type GetSymbol struct {
 
 func (gs GetSymbol) CheckStatus() error {
 	if !gs.Status {
-		return fmt.Errorf("XTB response GetSymbol request status: %t, errorCode: %s, errorDescr: %s",
-			gs.Status, gs.ErrorCode, gs.ErrorDescr)
+		return &StatusError{
+			Status:     false,
+			ErrorCode:  gs.ErrorCode,
+			ErrorDescr: gs.ErrorDescr,
+		}
 	}
 	return nil
 }
 
 func (gs GetSymbol) CheckCustomTag(customTag string) error {
 	if gs.CustomTag != customTag {
-		return fmt.Errorf("XTB response GetSymbol customTag is not equal, expected: %s, got: %s",
-			customTag, gs.CustomTag)
+		return &CustomTagError{
+			Returned: gs.CustomTag,
+			Provided: customTag,
+		}
 	}
 	return nil
 }
@@ -115,16 +118,21 @@ type GetSymbolExtended struct {
 
 func (gse GetSymbolExtended) CheckStatus() error {
 	if !gse.Status {
-		return fmt.Errorf("XTB response GetSymbolExtended request status: %t, errorCode: %s, errorDescr: %s",
-			gse.Status, gse.ErrorCode, gse.ErrorDescr)
+		return &StatusError{
+			Status:     false,
+			ErrorCode:  gse.ErrorCode,
+			ErrorDescr: gse.ErrorDescr,
+		}
 	}
 	return nil
 }
 
 func (gse GetSymbolExtended) CheckCustomTag(customTag string) error {
 	if gse.CustomTag != customTag {
-		return fmt.Errorf("XTB response GetSymbolExtended customTag is not equal, expected: %s, got: %s",
-			customTag, gse.CustomTag)
+		return &CustomTagError{
+			Returned: gse.CustomTag,
+			Provided: customTag,
+		}
 	}
 	return nil
 }

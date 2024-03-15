@@ -77,6 +77,10 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 					websocket.CloseNormalClosure) {
 					wsc.logger.ErrorContext(ctx, "Failed to read a message", logging.ErrorAttr(err))
 				}
+				// For example after Logout: websocket: close 1006 (abnormal closure): unexpected EOF
+				// Logout is normally processed, response (ReadMessage) is read correctly, and after
+				// processing Logout conn (connection) is closed with the close 1006 message.
+				// This situation also occur after too many Writes to XTB by client.
 				wsc.logger.InfoContext(ctx, "Closing reader", logging.ErrorAttr(err))
 				return
 			}

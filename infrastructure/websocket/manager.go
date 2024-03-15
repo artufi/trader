@@ -37,7 +37,8 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 	if err != nil {
 		if resp != nil {
 			resp.Body.Close()
-			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url), "statusCode", resp.StatusCode)
+			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url),
+				"statusCode", resp.StatusCode)
 		} else {
 			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url))
 		}
@@ -46,7 +47,7 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 
 	connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
 	if !ok {
-		return nil, errors.New("lack of connection details")
+		return nil, errors.New("no connection details")
 	}
 
 	client := &WSClient{
@@ -60,6 +61,9 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 	}
 
 	wsh.addClient(ctx, client)
+
+	// read client messages
+	go client.ReadMessages(ctx)
 
 	return client, nil
 }

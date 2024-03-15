@@ -6,28 +6,33 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
+const (
+	tradeTransaction       = "tradeTransaction"
+	tradeTransactionStatus = "tradeTransactionStatus"
+)
+
 func TradeTransaction(tradeTransInfo command.TradeTransInfo, customTag string) ([]byte, error) {
-	tradeTransaction := command.TradeTransaction{
-		Command:   "tradeTransaction",
+	tt := command.TradeTransaction{
+		Command:   tradeTransaction,
 		CustomTag: customTag,
 	}
-	tradeTransaction.Arguments.TradeTransInfo = tradeTransInfo
-	transactionJSON, err := json.Marshal(tradeTransaction)
+	tt.Arguments.TradeTransInfo = tradeTransInfo
+	ttJSON, err := json.Marshal(tt)
 	if err != nil {
-		return nil, fmt.Errorf("serialize TradeTransaction command: %w", err)
+		return nil, fmt.Errorf("serialize %s command: %w", tradeTransaction, err)
 	}
-	return transactionJSON, nil
+	return ttJSON, nil
 }
 
 func TradeTransactionStatus(orderNo int, customTag string) ([]byte, error) {
-	tradeTransactionStatus := command.TradeTransactionStatus{
-		Command:   "tradeTransactionStatus",
+	tts := command.TradeTransactionStatus{
+		Command:   tradeTransactionStatus,
 		CustomTag: customTag,
 	}
-	tradeTransactionStatus.Arguments.Order = orderNo
-	transactionStatusJSON, err := json.Marshal(tradeTransactionStatus)
+	tts.Arguments.Order = orderNo
+	ttsJSON, err := json.Marshal(tts)
 	if err != nil {
-		return nil, fmt.Errorf("serialize TradeTransactionStatus command: %w", err)
+		return nil, fmt.Errorf("serialize %s command: %w", tradeTransactionStatus, err)
 	}
-	return transactionStatusJSON, nil
+	return ttsJSON, nil
 }

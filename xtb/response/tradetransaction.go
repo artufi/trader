@@ -1,7 +1,5 @@
 package response
 
-import "fmt"
-
 type TradeTransaction struct {
 	Status          bool   `json:"status"`
 	StreamSessionId string `json:"streamSessionId,omitempty"`
@@ -15,16 +13,21 @@ type TradeTransaction struct {
 
 func (tt TradeTransaction) CheckStatus() error {
 	if !tt.Status {
-		return fmt.Errorf("XTB response TradeTransaction status: %t, errorCode: %s, errorDescr: %s",
-			tt.Status, tt.ErrorCode, tt.ErrorDescr)
+		return &StatusError{
+			Status:     false,
+			ErrorCode:  tt.ErrorCode,
+			ErrorDescr: tt.ErrorDescr,
+		}
 	}
 	return nil
 }
 
 func (tt TradeTransaction) CheckCustomTag(customTag string) error {
 	if tt.CustomTag != customTag {
-		return fmt.Errorf("XTB response TradeTransaction customTag is not equal, expected: %s, got: %s",
-			customTag, tt.CustomTag)
+		return &CustomTagError{
+			Returned: tt.CustomTag,
+			Provided: customTag,
+		}
 	}
 	return nil
 }
@@ -36,8 +39,8 @@ type TradeTransactionStatus struct {
 		Ask           float64       `json:"ask"`
 		Bid           float64       `json:"bid"`
 		CustomComment string        `json:"customComment"`
-		Message       interface{}   `json:"message"` // not sure maybe pointer?
-		Order         int           `json:"order"`   // not sure maybe float64
+		Message       string        `json:"message"`
+		Order         int           `json:"order"` // not sure maybe float64
 		RequestStatus RequestStatus `json:"requestStatus"`
 	} `json:"returnData"`
 	ErrorCode  string `json:"errorCode,omitempty"`
@@ -63,16 +66,21 @@ var requestStatusName = map[RequestStatus]string{
 
 func (tts TradeTransactionStatus) CheckStatus() error {
 	if !tts.Status {
-		return fmt.Errorf("XTB TradeTransactionStatus response requestStatus: %t, errorCode: %s, errorDescr: %s",
-			tts.Status, tts.ErrorCode, tts.ErrorDescr)
+		return &StatusError{
+			Status:     false,
+			ErrorCode:  tts.ErrorCode,
+			ErrorDescr: tts.ErrorDescr,
+		}
 	}
 	return nil
 }
 
 func (tts TradeTransactionStatus) CheckCustomTag(customTag string) error {
 	if tts.CustomTag != customTag {
-		return fmt.Errorf("XTB response TradeTransactionStatus customTag is not equal, expected: %s, got: %s",
-			customTag, tts.CustomTag)
+		return &CustomTagError{
+			Returned: tts.CustomTag,
+			Provided: customTag,
+		}
 	}
 	return nil
 }
@@ -80,18 +88,23 @@ func (tts TradeTransactionStatus) CheckCustomTag(customTag string) error {
 func (tts TradeTransactionStatus) CheckRequestStatus() (RequestStatus, error) {
 	switch tts.ReturnData.RequestStatus {
 	case ERROR:
-		return ERROR, fmt.Errorf("XTB TradeTransactionStatus response requestStatus: %s, message: %s",
-			requestStatusName[tts.ReturnData.RequestStatus], tts.ReturnData.Message)
+		return ERROR, &RequestStatusError{
+			RequestStatus: requestStatusName[tts.ReturnData.RequestStatus],
+			Message:       tts.ReturnData.Message,
+		}
 	case REJECTED:
-		return REJECTED, fmt.Errorf("XTB TradeTransactionStatus response requestStatus: %s, message: %s",
-			requestStatusName[tts.ReturnData.RequestStatus], tts.ReturnData.Message)
+		return REJECTED, &RequestStatusError{
+			RequestStatus: requestStatusName[tts.ReturnData.RequestStatus],
+			Message:       tts.ReturnData.Message,
+		}
 	case ACCEPTED:
 		return ACCEPTED, nil
 	case PENDING:
 		return PENDING, nil
 	default:
-		return tts.ReturnData.RequestStatus,
-			fmt.Errorf("XTB TradeTransactionStatus unknown response requestStatus: %d, message: %s",
-				tts.ReturnData.RequestStatus, tts.ReturnData.Message)
+		return tts.ReturnData.RequestStatus, &RequestStatusError{
+			RequestStatus: "UNKNOWN",
+			Message:       tts.ReturnData.Message,
+		}
 	}
 }

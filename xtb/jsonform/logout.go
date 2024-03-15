@@ -6,14 +6,16 @@ import (
 	"github.com/artufi/trader/xtb/command"
 )
 
+const logout = "logout"
+
 func Logout(customTag string) ([]byte, error) {
-	logout := command.Logout{
-		Command:   "logout",
+	l := command.Logout{
+		Command:   logout,
 		CustomTag: customTag,
 	}
-	logoutJSON, err := json.Marshal(logout)
+	lJSON, err := json.Marshal(l)
 	if err != nil {
-		return nil, fmt.Errorf("serialize Logout command: %w", err)
+		return nil, fmt.Errorf("serialize %s command: %w", logout, err)
 	}
-	return logoutJSON, nil
+	return lJSON, nil
 }
