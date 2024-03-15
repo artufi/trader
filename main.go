@@ -24,6 +24,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.ConnDetailsMiddleware(cfg, logger))
+	r.Get("/purchases", controller.PurchasesHandler(cfg, wsManager, logger))
 	r.Get("/purchase", controller.PurchaseHandler(cfg, wsManager, logger))
 	r.Get("/purchase/status", controller.TransactionStatusHandler(cfg, wsManager, logger))
 
