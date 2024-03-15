@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/controller/middleware"
 	"github.com/artufi/trader/infrastructure/websocket"
@@ -12,10 +13,10 @@ import (
 	"net/http"
 )
 
-func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
+func PurchasesHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		logger.InfoContext(ctx, "Start processing purchase request")
+		logger.InfoContext(ctx, "Start processing purchases request")
 
 		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
 		if !ok {
@@ -43,7 +44,7 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		// log user into XTB
 		loginResponse, err := h.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to login")
+			logger.ErrorContext(ctx, "Failed to login", logging.ErrorAttr(err))
 			http.Error(w, "Failed to login", http.StatusBadRequest)
 			return
 		}
@@ -111,6 +112,117 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		logoutResponse, err := h.Logout(ctx)
 		if err != nil {
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
+			return
+		}
+		logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
+
+		logger.Info("Purchases request fully processed")
+	}
+}
+
+func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		logger.InfoContext(ctx, "Start processing purchase request")
+
+		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
+		if !ok {
+			logger.ErrorContext(ctx, "Failed to get ConnDetails")
+			http.Error(w, "Could not retrieve client details", http.StatusInternalServerError)
+			return
+		}
+		traceID := connDetails.TraceID.String()
+
+		wsClient, err := wsManager.DialForNewClient(ctx, cfg.XTB.Demo.WebSocketURL, nil)
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
+			http.Error(w, "Failed to establish client connection", http.StatusInternalServerError)
+			return
+		}
+		defer func() {
+			wsManager.RemoveClient(ctx, wsClient)
+		}()
+
+		h := Handler{
+			Proc:    processor.NewProc(wsClient),
+			TraceID: traceID,
+		}
+
+		// log user into XTB
+		loginResponse, err := h.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to login", logging.ErrorAttr(err))
+			http.Error(w, "Failed to login", http.StatusBadRequest)
+			return
+		}
+		logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
+
+		// get purchase instructions
+		var purchaseInstruction model.PurchaseInstruction
+		err = json.NewDecoder(r.Body).Decode(&purchaseInstruction)
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to read request body with purchase instruction", logging.ErrorAttr(err))
+			http.Error(w, "Failed to read body", http.StatusBadRequest)
+			return
+		}
+
+		logger.InfoContext(ctx, "Will process purchase instruction", logging.PurchaseInstrAttr(purchaseInstruction))
+
+		symbol := purchaseInstruction.Symbol
+
+		// get symbol details
+		symbolResponse, err := h.GetSymbolExtended(ctx, symbol)
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to process GetSymbol",
+				logging.ErrorAttr(err),
+				logging.SymbolAttr(symbol))
+			http.Error(w, "Failed to execute GetSymbol", http.StatusInternalServerError)
+			return
+		}
+		logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
+
+		// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
+		tradeTransInfo, err := purchaseInstruction.PrepareTradeTransInfo(symbolResponse, 0.2, 0.2)
+		if err != nil {
+			logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
+				logging.ErrorAttr(err),
+				logging.SymbolAttr(symbol))
+			http.Error(w, fmt.Sprintf("Failed to prepare TradeTransInfo: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		// process TradeTransaction
+		tradeResponse, err := h.TradeTransaction(ctx, symbol, tradeTransInfo)
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to process TradeTransaction",
+				logging.ErrorAttr(err),
+				logging.SymbolAttr(symbol))
+			http.Error(w, "Failed to execute TradeTransaction", http.StatusInternalServerError)
+			return
+		}
+		logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeResponse))
+
+		// process TradeTransactionStatus
+		tradeResponseStatus, err := h.TradeTransactionStatus(ctx, symbol, tradeResponse.ReturnData.Order)
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
+				logging.ErrorAttr(err),
+				logging.SymbolAttr(symbol))
+			http.Error(w, "Failed to execute TradeTransactionStatus", http.StatusInternalServerError)
+			return
+		}
+
+		//reqStatus, err := tradeResponseStatus.CheckRequestStatus()
+		//if reqStatus == response.ACCEPTED || reqStatus == response.PENDING || reqStatus == response.REJECTED {
+		//	go sendPing(ctx, wsClient, logger, 5)
+		//}
+		logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
+
+		// logout user after processing
+		logoutResponse, err := h.Logout(ctx)
+		if err != nil {
+			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
+			http.Error(w, "Failed to execute TradeTransactionStatus", http.StatusInternalServerError)
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
