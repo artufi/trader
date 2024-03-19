@@ -9,40 +9,51 @@ import (
 )
 
 type PurchaseInstruction struct {
-	Symbol     string  `json:"symbol"`
-	Date       string  `json:"date"`
-	Allocation float64 `json:"allocation"`
-	PredsProba float64 `json:"preds_proba"`
-	StopLoss   float64 `json:"stop_loss"`
-	TakeProfit float64 `json:"take_profit"`
-	ModelSetup struct {
+	Symbol         string  `json:"symbol"`
+	PredictionDate string  `json:"prediction_date"`
+	Allocation     float64 `json:"allocation"`
+	PredsProba     float64 `json:"preds_proba"`
+	StopLoss       float64 `json:"stop_loss"`
+	TakeProfit     float64 `json:"take_profit"`
+	ModelSetup     struct {
 		ForecastHorizon int    `json:"forecast_horizon"`
 		TargetChange    int    `json:"target_change"`
 		ModelType       string `json:"model_type"`
 	} `json:"model_setup"`
 }
 
-func (pi PurchaseInstruction) PrepareTradeTransInfo(symbolData response.GetSymbolExtended, symbolBaseVolume float64, volumeToBuy float64) (command.TradeTransInfo, error) {
+const (
+	BUY  = "Buy"
+	SELL = "Sell"
+)
+
+func (pi PurchaseInstruction) PrepareTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// TODO what if 0?
-	if pi.TakeProfit >= 0 {
-		return pi.PrepareBUYTradeTransInfo(symbolData, symbolBaseVolume, volumeToBuy)
+	switch pi.ModelSetup.ModelType {
+	case BUY:
+		if pi.TakeProfit >= 0 {
+			return pi.prepareBUYTradeTransInfo(symbolData, volumeToBuy)
+		}
+	case SELL:
+		if pi.TakeProfit < 0 {
+			return pi.prepareSELLTradeTransInfo(symbolData, volumeToBuy)
+		}
 	}
-	return pi.PrepareSELLTradeTransInfo(symbolData, symbolBaseVolume, volumeToBuy)
+	return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: UNKNOWN ModelType")
 }
 
-func (pi PurchaseInstruction) PrepareBUYTradeTransInfo(symbolData response.GetSymbolExtended, symbolBaseVolume float64, volumeToBuy float64) (command.TradeTransInfo, error) {
+func (pi PurchaseInstruction) prepareBUYTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// precision to two decimal places
 	precision := math.Pow(10, 2)
-	// calculate the price for the volume you want to buy,
-	// taking into account the base amount for a specific instrument - it will not necessarily always be 1!
-	volumePrice := (symbolData.ReturnData.Ask * volumeToBuy) / symbolBaseVolume
-	tp := math.Round((volumePrice+(volumePrice*pi.TakeProfit/100))*precision) / precision
-	sl := math.Round((volumePrice-(volumePrice*pi.StopLoss/100))*precision) / precision
+
+	buyPrice := symbolData.ReturnData.Ask
+	tp := math.Round((buyPrice+(buyPrice*math.Abs(pi.TakeProfit/100)))*precision) / precision
+	sl := math.Round((buyPrice-(buyPrice*pi.StopLoss/100))*precision) / precision
 
 	tradeTransInfo := command.TradeTransInfo{
 		CustomComment: "BUY TRANSACTION",
 		Expiration:    time.Now().Add(time.Minute * 10).UnixMilli(),
-		Price:         symbolData.ReturnData.Ask,
+		Price:         buyPrice,
 		Symbol:        symbolData.ReturnData.Symbol,
 		Type:          command.OPEN,
 		Volume:        volumeToBuy,
@@ -57,19 +68,17 @@ func (pi PurchaseInstruction) PrepareBUYTradeTransInfo(symbolData response.GetSy
 	return tradeTransInfo, nil
 }
 
-func (pi PurchaseInstruction) PrepareSELLTradeTransInfo(symbolData response.GetSymbolExtended, symbolBaseVolume float64, volumeToBuy float64) (command.TradeTransInfo, error) {
+func (pi PurchaseInstruction) prepareSELLTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// precision to two decimal places
 	precision := math.Pow(10, 2)
-	// calculate the price for the volume you want to buy,
-	// taking into account the base amount for a specific instrument - it will not necessarily always be 1!
-	volumePrice := (symbolData.ReturnData.Bid * volumeToBuy) / symbolBaseVolume
-	tp := math.Round((volumePrice-(volumePrice*pi.TakeProfit/100))*precision) / precision
-	sl := math.Round((volumePrice+(volumePrice*pi.StopLoss/100))*precision) / precision
+	sellPrice := symbolData.ReturnData.Bid
+	tp := math.Round((sellPrice-(sellPrice*math.Abs(pi.TakeProfit)/100))*precision) / precision
+	sl := math.Round((sellPrice+(sellPrice*pi.StopLoss/100))*precision) / precision
 
 	tradeTransInfo := command.TradeTransInfo{
 		CustomComment: "SELL TRANSACTION",
 		Expiration:    time.Now().Add(time.Minute * 10).UnixMilli(),
-		Price:         symbolData.ReturnData.Bid,
+		Price:         sellPrice,
 		Symbol:        symbolData.ReturnData.Symbol,
 		Type:          command.OPEN,
 		Volume:        volumeToBuy,

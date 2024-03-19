@@ -75,7 +75,7 @@ func PurchasesHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logg
 			logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
 
 			// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
-			tradeTransInfo, err := purchaseInstruction.PrepareTradeTransInfo(symbolResponse, 0.2, 0.2)
+			tradeTransInfo, err := purchaseInstruction.PrepareTradeTransInfo(symbolResponse, 0.01)
 			if err != nil {
 				logger.WarnContext(ctx, "Failed to prepare TradeTransInfo", logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
@@ -182,7 +182,7 @@ func PurchaseHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logge
 		logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
 
 		// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
-		tradeTransInfo, err := purchaseInstruction.PrepareTradeTransInfo(symbolResponse, 0.2, 0.2)
+		tradeTransInfo, err := purchaseInstruction.PrepareTradeTransInfo(symbolResponse, 0.01)
 		if err != nil {
 			logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
 				logging.ErrorAttr(err),
