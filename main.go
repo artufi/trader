@@ -8,6 +8,7 @@ import (
 	"github.com/artufi/trader/infrastructure/database"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
+	"github.com/artufi/trader/model"
 	"github.com/go-chi/chi/v5"
 	ws "github.com/gorilla/websocket"
 	"log/slog"
@@ -26,6 +27,7 @@ func main() {
 	defer db.Close()
 	err := database.Connect(db, 10, time.Second*2)
 	if err != nil {
+		logger.Info("Failed to connect with database", logging.ErrorAttr(err))
 		panic(err)
 	}
 	logger.Info("Connected to database", logging.URLAttr(cfg.Database.Host+cfg.Database.Port))
@@ -33,10 +35,19 @@ func main() {
 	dialer := &ws.Dialer{}
 	wsManager := websocket.NewWSManager(dialer, logger)
 
+	purchaseC := controller.Purchase{
+		Cfg:             cfg,
+		WSManager:       wsManager,
+		Logger:          logger,
+		PositionService: model.PositionService{DB: db},
+		OrderService:    model.OrderService{DB: db},
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.ConnDetailsMiddleware(cfg, logger))
-	r.Get("/purchases", controller.PurchasesHandler(cfg, wsManager, logger))
-	r.Get("/purchase", controller.PurchaseHandler(cfg, wsManager, logger))
+	r.Get("/purchases", purchaseC.PurchasesHandler())
+	r.Get("/purchase", purchaseC.PurchaseHandler())
+
 	r.Get("/purchase/status", controller.TransactionStatusHandler(cfg, wsManager, logger))
 
 	logger.Info("Starting application port: 4000...")
