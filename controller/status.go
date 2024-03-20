@@ -35,13 +35,13 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 			wsManager.RemoveClient(ctx, wsClient)
 		}()
 
-		h := Handler{
+		apiH := APIHandler{
 			Proc:    processor.NewProc(wsClient),
 			TraceID: traceID,
 		}
 
 		// log user into XTB
-		loginResponse, err := h.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
+		loginResponse, err := apiH.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to login", logging.ErrorAttr(err))
 			http.Error(w, "Failed to login", http.StatusBadRequest)
@@ -60,7 +60,7 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		}
 
 		// process TradeTransactionStatus
-		tradeResponseStatus, err := h.TradeTransactionStatus(ctx, "", order.Number)
+		tradeResponseStatus, err := apiH.TradeTransactionStatus(ctx, "", order.Number)
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
 			http.Error(w, fmt.Sprintf("Unable to obtain transaction status for order: %d", order.Number), http.StatusBadRequest)
@@ -69,7 +69,7 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
 
 		// logout user after processing
-		logoutResponse, err := h.Logout(ctx)
+		logoutResponse, err := apiH.Logout(ctx)
 		if err != nil {
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
 			return
