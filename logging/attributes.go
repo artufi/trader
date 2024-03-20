@@ -40,3 +40,7 @@ func PurchaseInstrAttr(purchaseInstr model.PurchaseInstruction) slog.Attr {
 func RespAttr(resp interface{}) slog.Attr {
 	return slog.Any("resp", resp)
 }
+
+func IDAttr(id int) slog.Attr {
+	return slog.Any("id", id)
+}
