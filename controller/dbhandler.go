@@ -10,16 +10,16 @@ import (
 )
 
 const (
-	orderName    = "order"
-	positionName = "position"
+	orderName      = "order"
+	predictionName = "prediction"
 )
 
 type DBHandler struct {
 	TraceID string
 	Logger  *slog.Logger
 
-	PositionService model.PositionService
-	OrderService    model.OrderService
+	PredictionService model.PredictionService
+	OrderService      model.OrderService
 }
 
 func (h DBHandler) InsertOrder(ctx context.Context, order model.Order) (int, error) {
@@ -31,11 +31,11 @@ func (h DBHandler) InsertOrder(ctx context.Context, order model.Order) (int, err
 	return id, nil
 }
 
-func (h DBHandler) InsertPosition(ctx context.Context, position model.Position) (int, error) {
-	h.Logger.InfoContext(ctx, fmt.Sprintf("Inserting %s", positionName), positionName, position)
-	id, err := h.PositionService.Insert(position)
+func (h DBHandler) InsertPrediction(ctx context.Context, prediction model.Prediction) (int, error) {
+	h.Logger.InfoContext(ctx, fmt.Sprintf("Inserting %s", predictionName), predictionName, prediction)
+	id, err := h.PredictionService.Insert(prediction)
 	if err != nil {
-		return h.handleInsertionError(ctx, err, id, positionName)
+		return h.handleInsertionError(ctx, err, id, predictionName)
 	}
 	return id, nil
 }

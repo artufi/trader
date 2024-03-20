@@ -36,11 +36,11 @@ func main() {
 	wsManager := websocket.NewWSManager(dialer, logger)
 
 	purchaseC := controller.Purchase{
-		Cfg:             cfg,
-		WSManager:       wsManager,
-		Logger:          logger,
-		PositionService: model.PositionService{DB: db},
-		OrderService:    model.OrderService{DB: db},
+		Cfg:               cfg,
+		WSManager:         wsManager,
+		Logger:            logger,
+		PredictionService: model.PredictionService{DB: db},
+		OrderService:      model.OrderService{DB: db},
 	}
 
 	r := chi.NewRouter()

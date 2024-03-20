@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type PurchaseInstruction struct {
+type PredictionDetails struct {
 	Symbol         string  `json:"symbol"`
 	PredictionDate string  `json:"prediction_date"`
 	Allocation     float64 `json:"allocation"`
@@ -27,28 +27,28 @@ const (
 	SELL = "Sell"
 )
 
-func (pi PurchaseInstruction) PrepareTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
+func (pd PredictionDetails) PrepareTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// TODO what if 0?
-	switch pi.ModelSetup.ModelType {
+	switch pd.ModelSetup.ModelType {
 	case BUY:
-		if pi.TakeProfit >= 0 {
-			return pi.prepareBUYTradeTransInfo(symbolData, volumeToBuy)
+		if pd.TakeProfit >= 0 {
+			return pd.prepareBUYTradeTransInfo(symbolData, volumeToBuy)
 		}
 	case SELL:
-		if pi.TakeProfit < 0 {
-			return pi.prepareSELLTradeTransInfo(symbolData, volumeToBuy)
+		if pd.TakeProfit < 0 {
+			return pd.prepareSELLTradeTransInfo(symbolData, volumeToBuy)
 		}
 	}
 	return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: UNKNOWN ModelType")
 }
 
-func (pi PurchaseInstruction) prepareBUYTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
+func (pd PredictionDetails) prepareBUYTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// precision to two decimal places
 	precision := math.Pow(10, 2)
 
 	buyPrice := symbolData.ReturnData.Ask
-	tp := math.Round((buyPrice+(buyPrice*math.Abs(pi.TakeProfit/100)))*precision) / precision
-	sl := math.Round((buyPrice-(buyPrice*pi.StopLoss/100))*precision) / precision
+	tp := math.Round((buyPrice+(buyPrice*math.Abs(pd.TakeProfit/100)))*precision) / precision
+	sl := math.Round((buyPrice-(buyPrice*pd.StopLoss/100))*precision) / precision
 
 	tradeTransInfo := command.TradeTransInfo{
 		CustomComment: "BUY TRANSACTION",
@@ -60,20 +60,20 @@ func (pi PurchaseInstruction) prepareBUYTradeTransInfo(symbolData response.GetSy
 		Sl:            sl,
 		Tp:            tp,
 	}
-	if pi.PredsProba >= 0.5 {
+	if pd.PredsProba >= 0.5 {
 		tradeTransInfo.Cmd = command.BUY
 	} else {
-		return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: preds_proba low value: %v", pi.PredsProba)
+		return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: preds_proba low value: %v", pd.PredsProba)
 	}
 	return tradeTransInfo, nil
 }
 
-func (pi PurchaseInstruction) prepareSELLTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
+func (pd PredictionDetails) prepareSELLTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// precision to two decimal places
 	precision := math.Pow(10, 2)
 	sellPrice := symbolData.ReturnData.Bid
-	tp := math.Round((sellPrice-(sellPrice*math.Abs(pi.TakeProfit)/100))*precision) / precision
-	sl := math.Round((sellPrice+(sellPrice*pi.StopLoss/100))*precision) / precision
+	tp := math.Round((sellPrice-(sellPrice*math.Abs(pd.TakeProfit)/100))*precision) / precision
+	sl := math.Round((sellPrice+(sellPrice*pd.StopLoss/100))*precision) / precision
 
 	tradeTransInfo := command.TradeTransInfo{
 		CustomComment: "SELL TRANSACTION",
@@ -85,10 +85,10 @@ func (pi PurchaseInstruction) prepareSELLTradeTransInfo(symbolData response.GetS
 		Sl:            sl,
 		Tp:            tp,
 	}
-	if pi.PredsProba >= 0.5 {
+	if pd.PredsProba >= 0.5 {
 		tradeTransInfo.Cmd = command.SELL
 	} else {
-		return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: preds_proba low value: %v", pi.PredsProba)
+		return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: preds_proba low value: %v", pd.PredsProba)
 	}
 	return tradeTransInfo, nil
 }

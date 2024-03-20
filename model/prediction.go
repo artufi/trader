@@ -6,20 +6,20 @@ import (
 	"time"
 )
 
-type Position struct {
+type Prediction struct {
 	ID      int
 	UserID  int
 	OrderID int
-	PurchaseInstruction
+	PredictionDetails
 }
 
-type PositionService struct {
+type PredictionService struct {
 	DB *sql.DB
 }
 
-func (ps PositionService) Insert(p Position) (int, error) {
+func (ps PredictionService) Insert(p Prediction) (int, error) {
 	row := ps.DB.QueryRow(`
-		INSERT INTO positions
+		INSERT INTO predictions
 			(user_id,
 			 order_id,
 			 symbol, 
@@ -38,7 +38,7 @@ func (ps PositionService) Insert(p Position) (int, error) {
 
 	err := row.Scan(&p.ID)
 	if err != nil {
-		return -1, fmt.Errorf("insert position: %w", err)
+		return -1, fmt.Errorf("insert prediction: %w", err)
 	}
 	return p.ID, nil
 }

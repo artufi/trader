@@ -20,8 +20,8 @@ type Purchase struct {
 	WSManager *websocket.WSManager
 	Logger    *slog.Logger
 
-	PositionService model.PositionService
-	OrderService    model.OrderService
+	PredictionService model.PredictionService
+	OrderService      model.OrderService
 }
 
 func (p *Purchase) PurchasesHandler() http.HandlerFunc {
@@ -54,10 +54,10 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 		}
 
 		dbH := DBHandler{
-			TraceID:         traceID,
-			Logger:          p.Logger,
-			PositionService: p.PositionService,
-			OrderService:    p.OrderService,
+			TraceID:           traceID,
+			Logger:            p.Logger,
+			PredictionService: p.PredictionService,
+			OrderService:      p.OrderService,
 		}
 
 		// log user into XTB
@@ -69,19 +69,19 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 		}
 		p.Logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
 
-		// get purchase instructions
-		purchaseInstructions := make([]model.PurchaseInstruction, 0)
-		err = json.NewDecoder(r.Body).Decode(&purchaseInstructions)
+		// get prediction detail
+		predictions := make([]model.PredictionDetails, 0)
+		err = json.NewDecoder(r.Body).Decode(&predictions)
 		if err != nil {
-			p.Logger.ErrorContext(ctx, "Failed to read request body with purchase instruction", logging.ErrorAttr(err))
+			p.Logger.ErrorContext(ctx, "Failed to read request body with prediction details list", logging.ErrorAttr(err))
 			http.Error(w, "Failed to read body", http.StatusBadRequest)
 			return
 		}
 
-		for _, purchaseInstruction := range purchaseInstructions {
-			p.Logger.InfoContext(ctx, "Will process purchase instruction", logging.PurchaseInstrAttr(purchaseInstruction))
+		for _, predictionDetails := range predictions {
+			p.Logger.InfoContext(ctx, "Will process prediction details", logging.PredictionDetailsAttr(predictionDetails))
 
-			symbol := purchaseInstruction.Symbol
+			symbol := predictionDetails.Symbol
 
 			// get symbol details
 			symbolResponse, err := apiH.GetSymbolExtended(ctx, symbol)
@@ -94,7 +94,7 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			p.Logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
 
 			// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
-			tradeTransInfo, err := purchaseInstruction.PrepareTradeTransInfo(symbolResponse, 0.01)
+			tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, 0.01)
 			if err != nil {
 				p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo", logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
@@ -151,19 +151,19 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			}
 			p.Logger.InfoContext(ctx, "Inserted order", logging.IDAttr(ordID))
 
-			position := model.Position{
-				UserID:              1,
-				OrderID:             ordID,
-				PurchaseInstruction: purchaseInstruction,
+			prediction := model.Prediction{
+				UserID:            1,
+				OrderID:           ordID,
+				PredictionDetails: predictionDetails,
 			}
-			posID, err := dbH.InsertPosition(ctx, position)
+			posID, err := dbH.InsertPrediction(ctx, prediction)
 			if err != nil {
-				p.Logger.ErrorContext(ctx, "Failed to Insert Position",
+				p.Logger.ErrorContext(ctx, "Failed to Insert Prediction",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
 				continue
 			}
-			p.Logger.InfoContext(ctx, "Inserted position", logging.IDAttr(posID))
+			p.Logger.InfoContext(ctx, "Inserted prediction", logging.IDAttr(posID))
 		}
 
 		// logout user after processing
@@ -215,18 +215,18 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 		}
 		p.Logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
 
-		// get purchase instructions
-		var purchaseInstruction model.PurchaseInstruction
-		err = json.NewDecoder(r.Body).Decode(&purchaseInstruction)
+		// get predictions
+		var predictionDetails model.PredictionDetails
+		err = json.NewDecoder(r.Body).Decode(&predictionDetails)
 		if err != nil {
-			p.Logger.ErrorContext(ctx, "Failed to read request body with purchase instruction", logging.ErrorAttr(err))
+			p.Logger.ErrorContext(ctx, "Failed to read request body with prediction details", logging.ErrorAttr(err))
 			http.Error(w, "Failed to read body", http.StatusBadRequest)
 			return
 		}
 
-		p.Logger.InfoContext(ctx, "Will process purchase instruction", logging.PurchaseInstrAttr(purchaseInstruction))
+		p.Logger.InfoContext(ctx, "Will process prediction details", logging.PredictionDetailsAttr(predictionDetails))
 
-		symbol := purchaseInstruction.Symbol
+		symbol := predictionDetails.Symbol
 
 		// get symbol details
 		symbolResponse, err := h.GetSymbolExtended(ctx, symbol)
@@ -240,7 +240,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 		p.Logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
 
 		// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
-		tradeTransInfo, err := purchaseInstruction.PrepareTradeTransInfo(symbolResponse, 0.01)
+		tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, 0.01)
 		if err != nil {
 			p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
 				logging.ErrorAttr(err),

@@ -33,8 +33,8 @@ func SymbolAttr(symbol string) slog.Attr {
 	return slog.Any("symbol", symbol)
 }
 
-func PurchaseInstrAttr(purchaseInstr model.PurchaseInstruction) slog.Attr {
-	return slog.Any("purchaseInstr", purchaseInstr)
+func PredictionDetailsAttr(predictionDetails model.PredictionDetails) slog.Attr {
+	return slog.Any("predictionDetails", predictionDetails)
 }
 
 func RespAttr(resp interface{}) slog.Attr {
