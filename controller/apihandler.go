@@ -8,7 +8,7 @@ import (
 	"github.com/artufi/trader/xtb/response"
 )
 
-type Handler struct {
+type APIHandler struct {
 	Proc    processor.Proc
 	TraceID string
 }
@@ -18,7 +18,7 @@ type RespChecker interface {
 	CheckCustomTag(customTag string) error
 }
 
-func (h Handler) ValidateResp(resp RespChecker, customTag string) error {
+func (h APIHandler) ValidateResp(resp RespChecker, customTag string) error {
 	var err error
 	if err = resp.CheckCustomTag(customTag); err != nil {
 		return err
@@ -29,7 +29,7 @@ func (h Handler) ValidateResp(resp RespChecker, customTag string) error {
 	return nil
 }
 
-func (h Handler) Login(ctx context.Context, userID, password string) (response.General, error) {
+func (h APIHandler) Login(ctx context.Context, userID, password string) (response.General, error) {
 	proc := "login"
 	customTag := h.TraceID + proc
 
@@ -44,7 +44,7 @@ func (h Handler) Login(ctx context.Context, userID, password string) (response.G
 	return resp, nil
 }
 
-func (h Handler) GetSymbolExtended(ctx context.Context, symbol string) (response.GetSymbolExtended, error) {
+func (h APIHandler) GetSymbolExtended(ctx context.Context, symbol string) (response.GetSymbolExtended, error) {
 	proc := "getSymbolExtended"
 	customTag := h.TraceID + proc + symbol
 
@@ -59,7 +59,7 @@ func (h Handler) GetSymbolExtended(ctx context.Context, symbol string) (response
 	return resp, nil
 }
 
-func (h Handler) TradeTransaction(ctx context.Context, symbol string, tradeTransInfo command.TradeTransInfo) (response.TradeTransaction, error) {
+func (h APIHandler) TradeTransaction(ctx context.Context, symbol string, tradeTransInfo command.TradeTransInfo) (response.TradeTransaction, error) {
 	proc := "tradeTransaction"
 	customTag := h.TraceID + proc + symbol
 
@@ -74,7 +74,7 @@ func (h Handler) TradeTransaction(ctx context.Context, symbol string, tradeTrans
 	return resp, nil
 }
 
-func (h Handler) TradeTransactionStatus(ctx context.Context, symbol string, orderNo int) (response.TradeTransactionStatus, error) {
+func (h APIHandler) TradeTransactionStatus(ctx context.Context, symbol string, orderNo int) (response.TradeTransactionStatus, error) {
 	proc := "tradeTransactionStatus"
 	customTag := h.TraceID + proc + symbol
 
@@ -89,7 +89,7 @@ func (h Handler) TradeTransactionStatus(ctx context.Context, symbol string, orde
 	return resp, err
 }
 
-func (h Handler) Logout(ctx context.Context) (response.General, error) {
+func (h APIHandler) Logout(ctx context.Context) (response.General, error) {
 	proc := "logout"
 	customTag := h.TraceID + proc
 	resp, err := h.Proc.Logout(ctx, customTag)
