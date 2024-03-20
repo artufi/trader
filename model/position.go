@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-type PositionService struct {
-	DB *sql.DB
-}
-
 type Position struct {
 	ID      int
 	UserID  int
@@ -17,13 +13,17 @@ type Position struct {
 	PurchaseInstruction
 }
 
+type PositionService struct {
+	DB *sql.DB
+}
+
 func (ps PositionService) Insert(p Position) (int, error) {
 	row := ps.DB.QueryRow(`
-		INSERT INTO position
+		INSERT INTO positions
 			(user_id,
 			 order_id,
 			 symbol, 
-			 date,
+			 prediction_date,
 			 allocation,
 			 preds_proba,
 			 stop_loss,
@@ -33,7 +33,7 @@ func (ps PositionService) Insert(p Position) (int, error) {
 			 model_type,
 			 created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		RETURNING id`, p.UserID, p.OrderID, p.Symbol, p.Date, p.Allocation, p.PredsProba, p.StopLoss, p.TakeProfit,
+		RETURNING id`, p.UserID, p.OrderID, p.Symbol, p.PredictionDate, p.Allocation, p.PredsProba, p.StopLoss, p.TakeProfit,
 		p.ModelSetup.ForecastHorizon, p.ModelSetup.TargetChange, p.ModelSetup.ModelType, time.Now())
 
 	err := row.Scan(&p.ID)
