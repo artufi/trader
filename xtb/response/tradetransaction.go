@@ -57,7 +57,7 @@ const (
 	REJECTED RequestStatus = 4
 )
 
-var requestStatusName = map[RequestStatus]string{
+var RequestStatusName = map[RequestStatus]string{
 	ERROR:    "ERROR",
 	PENDING:  "PENDING",
 	ACCEPTED: "ACCEPTED",
@@ -89,12 +89,12 @@ func (tts TradeTransactionStatus) CheckRequestStatus() (RequestStatus, error) {
 	switch tts.ReturnData.RequestStatus {
 	case ERROR:
 		return ERROR, &RequestStatusError{
-			RequestStatus: requestStatusName[tts.ReturnData.RequestStatus],
+			RequestStatus: RequestStatusName[tts.ReturnData.RequestStatus],
 			Message:       tts.ReturnData.Message,
 		}
 	case REJECTED:
 		return REJECTED, &RequestStatusError{
-			RequestStatus: requestStatusName[tts.ReturnData.RequestStatus],
+			RequestStatus: RequestStatusName[tts.ReturnData.RequestStatus],
 			Message:       tts.ReturnData.Message,
 		}
 	case ACCEPTED:
