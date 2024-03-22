@@ -11,6 +11,7 @@ type Order struct {
 	ID            int
 	Number        int
 	UserID        int
+	PredictionID  int
 	RequestStatus string
 	Message       string
 	command.TradeTransInfo
@@ -25,6 +26,7 @@ func (os OrderService) Insert(o Order) (int, error) {
 		INSERT INTO orders
 			(order_no,
 			 user_id,
+			 prediction_id,
 			 symbol,
 			 operation_code_cmd,
 			 transaction_type,
@@ -36,8 +38,8 @@ func (os OrderService) Insert(o Order) (int, error) {
 			 request_status,
 			 message,
 			 created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-		RETURNING id`, o.Number, o.UserID, o.Symbol, o.Cmd, o.Type, o.Expiration, o.Price, o.Sl, o.Tp, o.Volume,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		RETURNING id`, o.Number, o.UserID, o.PredictionID, o.Symbol, o.Cmd, o.Type, o.Expiration, o.Price, o.Sl, o.Tp, o.Volume,
 		o.RequestStatus, o.Message, time.Now())
 
 	err := row.Scan(&o.ID)

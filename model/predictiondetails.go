@@ -20,6 +20,9 @@ type PredictionDetails struct {
 		TargetChange    int    `json:"target_change"`
 		ModelType       string `json:"model_type"`
 	} `json:"model_setup"`
+	RunTimestamp      string `json:"runtimestamp"`
+	SlTpLogic         string `json:"sl_tp_logic"`
+	IdModelProperties string `json:"id_model_properties"`
 }
 
 const (

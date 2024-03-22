@@ -121,10 +121,24 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			}
 			p.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
 
+			prediction := model.Prediction{
+				UserID:            1,
+				PredictionDetails: predictionDetails,
+			}
+			predID, err := dbH.InsertPrediction(ctx, prediction)
+			if err != nil {
+				p.Logger.ErrorContext(ctx, "Failed to insert prediction",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+				continue
+			}
+			p.Logger.InfoContext(ctx, "Inserted prediction", logging.IDAttr(predID))
+
 			reqStatus, err := tradeResponseStatus.CheckRequestStatus()
 			order := model.Order{
 				Number:         tradeResponse.ReturnData.Order,
 				UserID:         1,
+				PredictionID:   predID,
 				RequestStatus:  response.RequestStatusName[reqStatus],
 				Message:        tradeResponseStatus.ReturnData.Message,
 				TradeTransInfo: tradeTransInfo,
@@ -135,35 +149,21 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 					order = model.Order{
 						Number:         tradeResponse.ReturnData.Order,
 						UserID:         1,
+						PredictionID:   predID,
 						RequestStatus:  rsErr.RequestStatus,
 						Message:        rsErr.Message,
 						TradeTransInfo: tradeTransInfo,
 					}
 				}
 			}
-
 			ordID, err := dbH.InsertOrder(ctx, order)
 			if err != nil {
-				p.Logger.ErrorContext(ctx, "Failed to Insert Order",
+				p.Logger.ErrorContext(ctx, "Failed to insert order",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
 				continue
 			}
 			p.Logger.InfoContext(ctx, "Inserted order", logging.IDAttr(ordID))
-
-			prediction := model.Prediction{
-				UserID:            1,
-				OrderID:           ordID,
-				PredictionDetails: predictionDetails,
-			}
-			posID, err := dbH.InsertPrediction(ctx, prediction)
-			if err != nil {
-				p.Logger.ErrorContext(ctx, "Failed to Insert Prediction",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
-				continue
-			}
-			p.Logger.InfoContext(ctx, "Inserted prediction", logging.IDAttr(posID))
 		}
 
 		// logout user after processing
