@@ -57,7 +57,6 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
 		pending:         make(map[string]*call),
 		userID:          connDetails.UserID,
-		ip:              connDetails.IPAddr,
 	}
 
 	wsh.addClient(ctx, client)

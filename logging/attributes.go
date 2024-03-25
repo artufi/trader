@@ -13,10 +13,6 @@ func ErrorAttr(err error) slog.Attr {
 	return slog.Any("error", err)
 }
 
-func ClientIPAttr(clientIP string) slog.Attr {
-	return slog.Any("clientIP", clientIP)
-}
-
 func UserIDAttr(userID string) slog.Attr {
 	return slog.Any("userID", userID)
 }

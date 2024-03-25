@@ -27,7 +27,6 @@ type WSClient struct {
 	mutex   sync.Mutex
 	pending map[string]*call
 
-	ip     string
 	userID string
 }
 

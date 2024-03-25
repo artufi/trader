@@ -14,7 +14,6 @@ const ConnDetailsKey connDetailsKey = "connDetails"
 
 type ConnDetails struct {
 	TraceID uuid.UUID
-	IPAddr  string
 	UserID  string
 }
 
@@ -22,11 +21,9 @@ func ConnDetailsMiddleware(cfg config.AppConfig, logger *slog.Logger) func(http.
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			traceID := uuid.New()
-			ipAddr := r.RemoteAddr
 
 			connDetails := ConnDetails{
 				TraceID: traceID,
-				IPAddr:  ipAddr,
 				UserID:  cfg.XTB.Demo.UserID,
 			}
 
