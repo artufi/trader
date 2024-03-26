@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/controller"
-	"github.com/artufi/trader/controller/middleware"
 	"github.com/artufi/trader/infrastructure/database"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
@@ -44,7 +43,6 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	r.Use(middleware.ConnDetailsMiddleware(cfg, logger))
 	r.Get("/purchases", purchaseC.PurchasesHandler())
 	r.Get("/purchase", purchaseC.PurchaseHandler())
 

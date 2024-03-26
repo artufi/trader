@@ -2,9 +2,7 @@ package websocket
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/artufi/trader/controller/middleware"
 	"github.com/artufi/trader/logging"
 	"github.com/gorilla/websocket"
 	"log/slog"
@@ -32,7 +30,7 @@ type WSManager struct {
 }
 
 // DialForNewClient creates a new client
-func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header) (*WSClient, error) {
+func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header, userID string) (*WSClient, error) {
 	conn, resp, err := wsh.dialer.Dial(url, requestHeader)
 	if err != nil {
 		if resp != nil {
@@ -45,18 +43,13 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 		return nil, fmt.Errorf("failed to establish Websocket connection: %w", err)
 	}
 
-	connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
-	if !ok {
-		return nil, errors.New("no connection details")
-	}
-
 	client := &WSClient{
 		conn:            conn,
 		manager:         wsh,
 		logger:          wsh.logger,
 		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
 		pending:         make(map[string]*call),
-		userID:          connDetails.UserID,
+		userID:          userID,
 	}
 
 	wsh.addClient(ctx, client)

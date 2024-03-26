@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/artufi/trader/config"
-	"github.com/artufi/trader/controller/middleware"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/model"
 	"github.com/artufi/trader/xtb/processor"
 	"github.com/artufi/trader/xtb/response"
+	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 )
@@ -26,18 +26,13 @@ type Purchase struct {
 
 func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		traceID := uuid.New().String()
+		userID := p.Cfg.XTB.Demo.UserID
+		ctx := logging.AppendAttrsCtx(r.Context(), logging.TraceIDAttr(traceID), logging.UserIDAttr(userID))
+
 		p.Logger.InfoContext(ctx, "Start processing purchases request")
 
-		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
-		if !ok {
-			p.Logger.ErrorContext(ctx, "Failed to get ConnDetails")
-			http.Error(w, "Could not retrieve client details", http.StatusInternalServerError)
-			return
-		}
-		traceID := connDetails.TraceID.String()
-
-		wsClient, err := p.WSManager.DialForNewClient(ctx, p.Cfg.XTB.Demo.WebSocketURL, nil)
+		wsClient, err := p.WSManager.DialForNewClient(ctx, p.Cfg.XTB.Demo.WebSocketURL, nil, userID)
 		if err != nil {
 			p.Logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
 			http.Error(w, "Failed to establish client connection", http.StatusInternalServerError)
@@ -180,18 +175,13 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 
 func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		traceID := uuid.New().String()
+		userID := p.Cfg.XTB.Demo.UserID
+		ctx := logging.AppendAttrsCtx(r.Context(), logging.TraceIDAttr(traceID), logging.UserIDAttr(userID))
+
 		p.Logger.InfoContext(ctx, "Start processing purchase request")
 
-		connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
-		if !ok {
-			p.Logger.ErrorContext(ctx, "Failed to get ConnDetails")
-			http.Error(w, "Could not retrieve client details", http.StatusInternalServerError)
-			return
-		}
-		traceID := connDetails.TraceID.String()
-
-		wsClient, err := p.WSManager.DialForNewClient(ctx, p.Cfg.XTB.Demo.WebSocketURL, nil)
+		wsClient, err := p.WSManager.DialForNewClient(ctx, p.Cfg.XTB.Demo.WebSocketURL, nil, userID)
 		if err != nil {
 			p.Logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
 			http.Error(w, "Failed to establish client connection", http.StatusInternalServerError)
