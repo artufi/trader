@@ -17,6 +17,10 @@ func UserIDAttr(userID string) slog.Attr {
 	return slog.Any("userID", userID)
 }
 
+func ClientID(clientID string) slog.Attr {
+	return slog.Any("clientID", clientID)
+}
+
 func TraceIDAttr(traceID string) slog.Attr {
 	return slog.Any("traceID", traceID)
 }

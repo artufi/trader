@@ -30,29 +30,29 @@ type WSManager struct {
 }
 
 // DialForNewClient creates a new client
-func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header, userID string) (*WSClient, error) {
-	conn, resp, err := wsh.dialer.Dial(url, requestHeader)
+func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header, userID string) (*WSClient, error) {
+	conn, resp, err := wsm.dialer.Dial(url, requestHeader)
 	if err != nil {
 		if resp != nil {
 			resp.Body.Close()
-			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url),
+			wsm.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url),
 				"statusCode", resp.StatusCode)
 		} else {
-			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url))
+			wsm.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url))
 		}
 		return nil, fmt.Errorf("failed to establish Websocket connection: %w", err)
 	}
 
 	client := &WSClient{
 		conn:            conn,
-		manager:         wsh,
-		logger:          wsh.logger,
+		manager:         wsm,
+		logger:          wsm.logger.With(logging.ClientID(userID)),
 		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
 		pending:         make(map[string]*call),
 		userID:          userID,
 	}
 
-	wsh.addClient(ctx, client)
+	wsm.addClient(ctx, client)
 
 	// read client messages
 	go client.ReadMessages(ctx)
@@ -60,22 +60,22 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 	return client, nil
 }
 
-func (wsh *WSManager) addClient(ctx context.Context, client *WSClient) {
-	wsh.Lock()
-	defer wsh.Unlock()
+func (wsm *WSManager) addClient(ctx context.Context, client *WSClient) {
+	wsm.Lock()
+	defer wsm.Unlock()
 
-	wsh.logger.InfoContext(ctx, "Adding new client")
-	wsh.clients[client] = struct{}{}
+	wsm.logger.InfoContext(ctx, "Adding new client")
+	wsm.clients[client] = struct{}{}
 }
 
-func (wsh *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
-	wsh.Lock()
-	defer wsh.Unlock()
+func (wsm *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
+	wsm.Lock()
+	defer wsm.Unlock()
 
-	if _, ok := wsh.clients[client]; ok {
-		wsh.logger.InfoContext(ctx, "Disconnecting client")
+	if _, ok := wsm.clients[client]; ok {
+		wsm.logger.InfoContext(ctx, "Disconnecting client")
 		client.CloseConnection()
 		client.StopSendRateLimiter()
-		delete(wsh.clients, client)
+		delete(wsm.clients, client)
 	}
 }
