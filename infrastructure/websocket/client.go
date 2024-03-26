@@ -63,7 +63,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 		// *http.Request context is done after processing request
 		// it can be any passed context!
 		case <-ctx.Done():
-			wsc.logger.InfoContext(ctx, "Context done - reader operation canceled", logging.ErrorAttr(ctx.Err()))
+			wsc.logger.InfoContext(ctx, "Reader operation canceled - context done", logging.ErrorAttr(ctx.Err()))
 			return
 		// TODO
 		// conn.ReadMessage is blocking so default case here is not the best pick
@@ -74,7 +74,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure,
 					websocket.CloseNormalClosure) {
-					wsc.logger.ErrorContext(ctx, "Failed to read a message", logging.ErrorAttr(err))
+					wsc.logger.ErrorContext(ctx, "Reader failed to read a message", logging.ErrorAttr(err))
 				}
 				// For example after Logout: websocket: close 1006 (abnormal closure): unexpected EOF
 				// Logout is normally processed, response (ReadMessage) is read correctly, and after
@@ -132,12 +132,12 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 				delete(wsc.pending, c.ID)
 				wsc.mutex.Unlock()
 			case <-chanBreaker.C:
-				wsc.logger.InfoContext(ctx, "Writer waiting for channel response timeout - protection against goroutine leak")
+				wsc.logger.InfoContext(ctx, "Reader waiting for channel response timeout - protection against goroutine leak")
 				return
 			// *http.Request context is done after processing request
 			// it can be any passed context!
 			case <-ctx.Done():
-				wsc.logger.InfoContext(ctx, "Context done - reader operation canceled", logging.ErrorAttr(ctx.Err()))
+				wsc.logger.InfoContext(ctx, "Reader operation canceled - context done", logging.ErrorAttr(ctx.Err()))
 				return
 			}
 		}
@@ -196,7 +196,28 @@ func (wsc *WSClient) WriteText(ctx context.Context, id string, data []byte) ([]b
 	// it can be any passed context!
 	case <-ctx.Done():
 		err := ctx.Err()
-		wsc.logger.InfoContext(ctx, "Context done - writer operation canceled", logging.ErrorAttr(err))
+		wsc.logger.InfoContext(ctx, "Writer operation canceled - context done", logging.ErrorAttr(err))
 		return nil, fmt.Errorf("writer operation canceled: context done: %w", err)
+	}
+}
+
+func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
+	if interval == 0 {
+		interval = 59
+	}
+	ticker := time.NewTicker(time.Second * interval)
+
+	for {
+		select {
+		case <-ticker.C:
+			wsc.logger.InfoContext(ctx, "Ping")
+			err := wsc.conn.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				wsc.logger.ErrorContext(ctx, "Error while writing Ping message", logging.ErrorAttr(err))
+			}
+		case <-ctx.Done():
+			err := ctx.Err()
+			wsc.logger.ErrorContext(ctx, "Ping operation canceled - context done", logging.ErrorAttr(err))
+		}
 	}
 }
