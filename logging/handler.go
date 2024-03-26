@@ -24,6 +24,11 @@ func (h LogHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
+func (h LogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	handlerWithAttrs := h.Handler.(*slog.JSONHandler).WithAttrs(attrs)
+	return LogHandler{Handler: handlerWithAttrs}
+}
+
 func AppendAttrsCtx(parent context.Context, attrs ...slog.Attr) context.Context {
 	if parent == nil {
 		parent = context.Background()
