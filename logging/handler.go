@@ -2,8 +2,13 @@ package logging
 
 import (
 	"context"
-	"github.com/artufi/trader/controller/middleware"
 	"log/slog"
+)
+
+type ctxKey string
+
+const (
+	logAttrs ctxKey = "logAttrs"
 )
 
 type LogHandler struct {
@@ -11,9 +16,29 @@ type LogHandler struct {
 }
 
 func (h LogHandler) Handle(ctx context.Context, r slog.Record) error {
-	if connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails); ok {
-		r.Add(TraceIDAttr(connDetails.TraceID.String()))
-		r.Add(UserIDAttr(connDetails.UserID))
+	if attrs, ok := ctx.Value(logAttrs).([]slog.Attr); ok {
+		for _, v := range attrs {
+			r.AddAttrs(v)
+		}
 	}
 	return h.Handler.Handle(ctx, r)
+}
+
+func AppendAttrsCtx(parent context.Context, attrs ...slog.Attr) context.Context {
+	if parent == nil {
+		parent = context.Background()
+	}
+
+	if a, ok := parent.Value(logAttrs).([]slog.Attr); ok {
+		for _, attr := range attrs {
+			a = append(a, attr)
+		}
+		return context.WithValue(parent, logAttrs, a)
+	}
+
+	var a []slog.Attr
+	for _, attr := range attrs {
+		a = append(a, attr)
+	}
+	return context.WithValue(parent, logAttrs, a)
 }
