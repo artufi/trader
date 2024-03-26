@@ -169,7 +169,7 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 		}
 		p.Logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
 
-		p.Logger.Info("Purchases request fully processed")
+		p.Logger.InfoContext(ctx, "Purchases request fully processed")
 	}
 }
 
