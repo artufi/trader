@@ -132,8 +132,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 				delete(wsc.pending, c.ID)
 				wsc.mutex.Unlock()
 			case <-chanBreaker.C:
-				wsc.logger.InfoContext(ctx, "Reader waiting for channel response timeout - protection against goroutine leak")
-				return
+				wsc.logger.InfoContext(ctx, "Reader waiting for channel response timeout - protection against client block")
 			// *http.Request context is done after processing request
 			// it can be any passed context!
 			case <-ctx.Done():
