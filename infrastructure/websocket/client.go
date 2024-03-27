@@ -218,10 +218,12 @@ func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 			err := wsc.conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				wsc.logger.ErrorContext(ctx, "Error while writing Ping message", logging.ErrorAttr(err))
+				return
 			}
 		case <-ctx.Done():
 			err := ctx.Err()
 			wsc.logger.ErrorContext(ctx, "Ping operation canceled - context done", logging.ErrorAttr(err))
+			return
 		}
 	}
 }
