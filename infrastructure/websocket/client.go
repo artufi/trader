@@ -27,7 +27,12 @@ type WSClient struct {
 	mutex   sync.Mutex
 	pending map[string]*call
 
-	userID string
+	userID          string
+	streamSessionID string
+}
+
+func (wsc *WSClient) SetStreamSessionID(ssid string) {
+	wsc.streamSessionID = ssid
 }
 
 func (wsc *WSClient) GetUserID() string {

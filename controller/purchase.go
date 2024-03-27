@@ -64,6 +64,8 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 		}
 		p.Logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
 
+		wsClient.SetStreamSessionID(loginResponse.StreamSessionId)
+
 		// get prediction detail
 		predictions := make([]model.PredictionDetails, 0)
 		err = json.NewDecoder(r.Body).Decode(&predictions)
@@ -204,6 +206,8 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 			return
 		}
 		p.Logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
+
+		wsClient.SetStreamSessionID(loginResponse.StreamSessionId)
 
 		// get predictions
 		var predictionDetails model.PredictionDetails
