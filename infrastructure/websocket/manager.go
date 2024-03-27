@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"fmt"
+	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/logging"
 	"github.com/gorilla/websocket"
 	"log/slog"
@@ -23,6 +24,7 @@ func NewWSManager(dialer *websocket.Dialer, logger *slog.Logger) *WSManager {
 }
 
 type WSManager struct {
+	cfg     config.AppConfig
 	dialer  *websocket.Dialer
 	logger  *slog.Logger
 	clients map[*WSClient]struct{}
@@ -56,6 +58,8 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 
 	// read client messages
 	go client.ReadMessages(ctx)
+	// keep client connected
+	go client.Ping(ctx, wsm.cfg.Client.Interval)
 
 	return client, nil
 }

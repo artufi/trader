@@ -1,6 +1,9 @@
 package config
 
-import "github.com/artufi/trader/infrastructure/database"
+import (
+	"github.com/artufi/trader/infrastructure/database"
+	"time"
+)
 
 type AppConfig struct {
 	XTB struct {
@@ -12,8 +15,10 @@ type AppConfig struct {
 			Password string
 		}
 	}
-
 	Database database.PostgresConfig
+	Client   struct {
+		Interval time.Duration
+	}
 }
 
 type Loader interface {
