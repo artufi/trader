@@ -56,6 +56,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 		// close and delete call from pending map
 		wsc.mutex.Lock()
 		for _, c := range wsc.pending {
+			c.Err = fmt.Errorf("reader failure")
 			close(c.Done)
 			delete(wsc.pending, c.ID)
 		}
@@ -142,6 +143,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 			// it can be any passed context!
 			case <-ctx.Done():
 				wsc.logger.InfoContext(ctx, "Reader operation canceled - context done", logging.ErrorAttr(ctx.Err()))
+				c.Err = fmt.Errorf("reader operation canceled - context done: %w", ctx.Err())
 				return
 			}
 		}
@@ -154,6 +156,7 @@ type call struct {
 	Req  []byte
 	Resp []byte
 	Done chan bool
+	Err  error
 }
 
 func (wsc *WSClient) WriteText(ctx context.Context, id string, data []byte) ([]byte, error) {
@@ -187,10 +190,8 @@ func (wsc *WSClient) WriteText(ctx context.Context, id string, data []byte) ([]b
 
 	select {
 	case _, ok := <-c.Done:
-		// TODO
-		// can also add error to call struct to return error cause from reader
 		if !ok {
-			return nil, fmt.Errorf("failed to read a response")
+			return nil, fmt.Errorf("failed to read a response: %w", c.Err)
 		}
 		return c.Resp, nil
 	case <-chanBreaker.C:
