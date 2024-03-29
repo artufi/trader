@@ -52,6 +52,7 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
 		pending:         make(map[string]*call),
 		userID:          userID,
+		ReConnCh:        make(chan bool, 1),
 	}
 
 	wsm.addClient(ctx, client)

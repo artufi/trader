@@ -29,6 +29,9 @@ type WSClient struct {
 
 	userID          string
 	streamSessionID string
+
+	// Buffer size 1 is required to not block client ReadMessages
+	ReConnCh chan bool
 }
 
 func (wsc *WSClient) SetStreamSessionID(ssid string) {
@@ -87,6 +90,9 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 				// processing Logout conn (connection) is closed with the close 1006 message.
 				// This situation also occur after too many Writes to XTB by client.
 				wsc.logger.InfoContext(ctx, "Closing reader", logging.ErrorAttr(err))
+
+				// send signal to reconnect client
+				wsc.ReConnCh <- true
 				return
 			}
 
