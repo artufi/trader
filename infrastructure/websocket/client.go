@@ -27,19 +27,11 @@ type WSClient struct {
 	mutex   sync.Mutex
 	pending map[string]*call
 
-	userID          string
-	streamSessionID string
+	UserID          string
+	StreamSessionID string
 
 	// Buffer size 1 is required to not block client ReadMessages
 	ReConnCh chan bool
-}
-
-func (wsc *WSClient) SetStreamSessionID(ssid string) {
-	wsc.streamSessionID = ssid
-}
-
-func (wsc *WSClient) GetUserID() string {
-	return wsc.userID
 }
 
 func (wsc *WSClient) CloseConnection() {
