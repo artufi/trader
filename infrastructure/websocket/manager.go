@@ -17,17 +17,17 @@ func NewWSManager(dialer *websocket.Dialer, logger *slog.Logger) *WSManager {
 		dialer = &websocket.Dialer{}
 	}
 	return &WSManager{
-		dialer:  dialer,
-		logger:  logger,
-		clients: make(map[*WSClient]struct{}),
+		dialer:      dialer,
+		logger:      logger,
+		userClients: make(map[string]map[*WSClient]struct{}),
 	}
 }
 
 type WSManager struct {
-	cfg     config.AppConfig
-	dialer  *websocket.Dialer
-	logger  *slog.Logger
-	clients map[*WSClient]struct{}
+	cfg         config.AppConfig
+	dialer      *websocket.Dialer
+	logger      *slog.Logger
+	userClients map[string]map[*WSClient]struct{}
 	sync.RWMutex
 }
 
@@ -48,7 +48,7 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 	client := &WSClient{
 		conn:            conn,
 		manager:         wsm,
-		logger:          wsm.logger.With(logging.ClientID(userID)),
+		logger:          wsm.logger,
 		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
 		pending:         make(map[string]*call),
 		UserID:          userID,
@@ -59,8 +59,6 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 
 	// read client messages
 	go client.ReadMessages(ctx)
-	// keep client connected
-	go client.Ping(ctx, wsm.cfg.Client.Interval)
 
 	return client, nil
 }
@@ -69,18 +67,25 @@ func (wsm *WSManager) addClient(ctx context.Context, client *WSClient) {
 	wsm.Lock()
 	defer wsm.Unlock()
 
-	wsm.logger.InfoContext(ctx, "Adding new client")
-	wsm.clients[client] = struct{}{}
+	wsm.logger.InfoContext(ctx, "Adding a new client")
+	if clients, ok := wsm.userClients[client.UserID]; ok {
+		clients[client] = struct{}{}
+	} else {
+		wsm.userClients[client.UserID] = make(map[*WSClient]struct{})
+		wsm.userClients[client.UserID][client] = struct{}{}
+	}
 }
 
 func (wsm *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
 	wsm.Lock()
 	defer wsm.Unlock()
 
-	if _, ok := wsm.clients[client]; ok {
-		wsm.logger.InfoContext(ctx, "Disconnecting client")
-		client.CloseConnection()
-		client.StopSendRateLimiter()
-		delete(wsm.clients, client)
+	if clients, ok := wsm.userClients[client.UserID]; ok {
+		if _, ok := clients[client]; ok {
+			wsm.logger.InfoContext(ctx, "Disconnecting one of user's client", logging.UserIDAttr(client.UserID), client)
+			client.CloseConnection()
+			client.StopSendRateLimiter()
+			delete(clients, client)
+		}
 	}
 }
