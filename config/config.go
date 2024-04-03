@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/artufi/trader/infrastructure/database"
-	"time"
 )
 
 type AppConfig struct {
@@ -15,9 +14,20 @@ type AppConfig struct {
 			Password string
 		}
 	}
-	Database database.PostgresConfig
-	Client   struct {
-		Interval time.Duration
+	Database struct {
+		database.PostgresConfig
+		Connection struct {
+			Attempts   int
+			NextTrySec int
+		}
+	}
+	Client struct {
+		Ping struct {
+			IntervalSec int
+		}
+		ConnectionPool struct {
+			Size int
+		}
 	}
 }
 

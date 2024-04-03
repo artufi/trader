@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"os"
+	"strconv"
 )
 
 func LoadDotEnvConfig(filename string) (AppConfig, error) {
@@ -45,6 +46,23 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 	cfg.Database.Password = os.Getenv("PSQL_PASSWORD")
 	cfg.Database.Database = os.Getenv("PSQL_DATABASE")
 	cfg.Database.SSLMode = os.Getenv("PSQL_SSLMODE")
+	cfg.Database.Connection.Attempts, err = strconv.Atoi(os.Getenv("DB_CONNECTION_ATTEMPTS"))
+	if err != nil {
+		panic(err)
+	}
+	cfg.Database.Connection.NextTrySec, err = strconv.Atoi(os.Getenv("DB_CONNECTION_NEXT_TRY_TIME_SEC"))
+	if err != nil {
+		panic(err)
+	}
+
+	cfg.Client.Ping.IntervalSec, err = strconv.Atoi(os.Getenv("WS_CLIENT_PING_INTERVAL_SEC"))
+	if err != nil {
+		panic(err)
+	}
+	cfg.Client.ConnectionPool.Size, err = strconv.Atoi(os.Getenv("WS_CLIENT_CONNECTION_POOL_SIZE"))
+	if err != nil {
+		panic(err)
+	}
 
 	return cfg, nil
 }
