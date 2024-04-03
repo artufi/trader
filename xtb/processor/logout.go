@@ -6,7 +6,7 @@ import (
 	"github.com/artufi/trader/xtb/response"
 )
 
-const logoutProc = "Logout"
+const logoutProc = "logout"
 
 func (p Proc) Logout(ctx context.Context, customTag string) (response.General, error) {
 	logoutJSON, err := jsonform.Logout(customTag)

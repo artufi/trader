@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const getSymbolExtProc = "GetSymbol"
+const getSymbolExtProc = "getSymbol"
 
 func (p Proc) GetSymbolExtended(ctx context.Context, symbol string, customTag string) (response.GetSymbolExtended, error) {
 	symbolJSON, err := jsonform.GetSymbol(
