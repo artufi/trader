@@ -7,6 +7,7 @@ import (
 	"github.com/artufi/trader/logging"
 	"github.com/gorilla/websocket"
 	"log/slog"
+	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -37,12 +38,12 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 	if err != nil {
 		if resp != nil {
 			resp.Body.Close()
-			wsm.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url),
+			wsm.logger.ErrorContext(ctx, "Failed to dial websocket", logging.ErrorAttr(err), logging.URLAttr(url),
 				"statusCode", resp.StatusCode)
 		} else {
-			wsm.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url))
+			wsm.logger.ErrorContext(ctx, "Failed to dial websocket", logging.ErrorAttr(err), logging.URLAttr(url))
 		}
-		return nil, fmt.Errorf("failed to establish Websocket connection: %w", err)
+		return nil, fmt.Errorf("manager failed to establish websocket connection: %w", err)
 	}
 
 	client := &WSClient{
@@ -82,10 +83,23 @@ func (wsm *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
 
 	if clients, ok := wsm.userClients[client.UserID]; ok {
 		if _, ok := clients[client]; ok {
-			wsm.logger.InfoContext(ctx, "Disconnecting one of user's client", logging.UserIDAttr(client.UserID), client)
+			wsm.logger.InfoContext(ctx, "Disconnecting one of user's client")
 			client.CloseConnection()
 			client.StopSendRateLimiter()
 			delete(clients, client)
 		}
 	}
+}
+
+func (wsm *WSManager) GetUserRandomClient(userID string) (*WSClient, error) {
+	if clients, ok := wsm.userClients[userID]; ok {
+		var clientList []*WSClient
+		for client := range clients {
+			clientList = append(clientList, client)
+		}
+		if len(clientList) > 0 {
+			return clientList[rand.Intn(len(clientList))], nil
+		}
+	}
+	return nil, fmt.Errorf("manager: no clients for user: %v", userID)
 }
