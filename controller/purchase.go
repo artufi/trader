@@ -32,15 +32,12 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 
 		p.Logger.InfoContext(ctx, "Start processing purchases request")
 
-		wsClient, err := p.WSManager.DialForNewClient(ctx, p.Cfg.XTB.Demo.WebSocketURL, nil, userID)
+		wsClient, err := p.WSManager.GetUserRandomClient(userID)
 		if err != nil {
-			p.Logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
-			http.Error(w, "Failed to establish client connection", http.StatusInternalServerError)
+			p.Logger.ErrorContext(ctx, "Failed to get client to process purchase request", logging.ErrorAttr(err))
+			http.Error(w, "No clients assigned to specified user", http.StatusInternalServerError)
 			return
 		}
-		defer func() {
-			p.WSManager.RemoveClient(ctx, wsClient)
-		}()
 
 		// init api handler
 		apiH := APIHandler{
@@ -54,17 +51,6 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			PredictionService: p.PredictionService,
 			OrderService:      p.OrderService,
 		}
-
-		// log user into XTB
-		loginResponse, err := apiH.Login(ctx, p.Cfg.XTB.Demo.UserID, p.Cfg.XTB.Demo.Password)
-		if err != nil {
-			p.Logger.ErrorContext(ctx, "Failed to login", logging.ErrorAttr(err))
-			http.Error(w, "Failed to login", http.StatusBadRequest)
-			return
-		}
-		p.Logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
-
-		wsClient.StreamSessionID = loginResponse.StreamSessionId
 
 		// get prediction detail
 		predictions := make([]model.PredictionDetails, 0)
@@ -183,31 +169,17 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 
 		p.Logger.InfoContext(ctx, "Start processing purchase request")
 
-		wsClient, err := p.WSManager.DialForNewClient(ctx, p.Cfg.XTB.Demo.WebSocketURL, nil, userID)
+		wsClient, err := p.WSManager.GetUserRandomClient(userID)
 		if err != nil {
-			p.Logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
-			http.Error(w, "Failed to establish client connection", http.StatusInternalServerError)
+			p.Logger.ErrorContext(ctx, "Failed to get client to process purchase request", logging.ErrorAttr(err))
+			http.Error(w, "No clients assigned to specified user", http.StatusInternalServerError)
 			return
 		}
-		defer func() {
-			p.WSManager.RemoveClient(ctx, wsClient)
-		}()
 
 		h := APIHandler{
 			Proc:    processor.NewProc(wsClient),
 			TraceID: traceID,
 		}
-
-		// log user into XTB
-		loginResponse, err := h.Login(ctx, p.Cfg.XTB.Demo.UserID, p.Cfg.XTB.Demo.Password)
-		if err != nil {
-			p.Logger.ErrorContext(ctx, "Failed to login", logging.ErrorAttr(err))
-			http.Error(w, "Failed to login", http.StatusBadRequest)
-			return
-		}
-		p.Logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
-
-		wsClient.StreamSessionID = loginResponse.StreamSessionId
 
 		// get predictions
 		var predictionDetails model.PredictionDetails
