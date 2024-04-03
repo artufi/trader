@@ -22,9 +22,9 @@ func main() {
 	logFile := logging.Must(logging.GetLogFile("app.log"))
 	logger := slog.New(logging.LogHandler{Handler: slog.NewJSONHandler(logFile, nil)})
 
-	db := database.MustOpen(database.OpenPool(context.Background(), cfg.Database))
+	db := database.MustOpen(database.OpenPool(context.Background(), cfg.Database.PostgresConfig))
 	defer db.Close()
-	err := database.Connect(db, 10, time.Second*2)
+	err := database.Connect(db, cfg.Database.Connection.Attempts, time.Second*time.Duration(cfg.Database.Connection.NextTrySec))
 	if err != nil {
 		logger.Info("Failed to connect with database", logging.ErrorAttr(err))
 		panic(err)
