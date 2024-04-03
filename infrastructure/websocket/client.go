@@ -51,7 +51,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 		// close and delete call from pending map
 		wsc.mutex.Lock()
 		for _, c := range wsc.pending {
-			c.Err = fmt.Errorf("reader failure")
+			c.Err = fmt.Errorf("client reader failure")
 			close(c.Done)
 			delete(wsc.pending, c.ID)
 		}
@@ -137,13 +137,13 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 				wsc.mutex.Unlock()
 			case <-chanBreaker.C:
 				wsc.logger.InfoContext(ctx, "Reader waiting for channel response timeout - protection against client block")
-				c.Err = fmt.Errorf("reader waiting for channel response timeout: %w", ctx.Err())
+				c.Err = fmt.Errorf("client reader waiting for channel response timeout: %w", ctx.Err())
 				close(c.Done)
 			// *http.Request context is done after processing request
 			// it can be any passed context!
 			case <-ctx.Done():
 				wsc.logger.InfoContext(ctx, "Reader operation canceled - context done", logging.ErrorAttr(ctx.Err()))
-				c.Err = fmt.Errorf("reader operation canceled - context done: %w", ctx.Err())
+				c.Err = fmt.Errorf("client reader operation canceled - context done: %w", ctx.Err())
 				close(c.Done)
 				return
 			}
@@ -182,7 +182,7 @@ func (wsc *WSClient) WriteText(ctx context.Context, id string, data []byte) ([]b
 	err := wsc.conn.WriteMessage(websocket.TextMessage, data)
 	wsc.mutex.Unlock()
 	if err != nil {
-		return nil, fmt.Errorf("failed to write message by websocket client: %w", err)
+		return nil, fmt.Errorf("client failed to write message by websocket: %w", err)
 	}
 	// start timer after writing message
 	// TODO
@@ -192,25 +192,22 @@ func (wsc *WSClient) WriteText(ctx context.Context, id string, data []byte) ([]b
 	select {
 	case _, ok := <-c.Done:
 		if !ok {
-			return nil, fmt.Errorf("failed to read a response: %w", c.Err)
+			return nil, fmt.Errorf("client failed to read a response: %w", c.Err)
 		}
 		return c.Resp, nil
 	case <-chanBreaker.C:
 		wsc.logger.WarnContext(ctx, "Writer waiting for channel response timeout - protection against goroutine leak")
-		return nil, fmt.Errorf("writer timeout")
+		return nil, fmt.Errorf("client writer timeout")
 	// *http.Request context is done after processing request
 	// it can be any passed context!
 	case <-ctx.Done():
 		err := ctx.Err()
 		wsc.logger.InfoContext(ctx, "Writer operation canceled - context done", logging.ErrorAttr(err))
-		return nil, fmt.Errorf("writer operation canceled: context done: %w", err)
+		return nil, fmt.Errorf("client writer operation canceled: context done: %w", err)
 	}
 }
 
 func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
-	if interval == 0 {
-		interval = 59
-	}
 	ticker := time.NewTicker(time.Second * interval)
 
 	for {
