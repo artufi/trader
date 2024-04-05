@@ -46,7 +46,7 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 	cfg.Database.Password = os.Getenv("PSQL_PASSWORD")
 	cfg.Database.Database = os.Getenv("PSQL_DATABASE")
 	cfg.Database.SSLMode = os.Getenv("PSQL_SSLMODE")
-	cfg.Database.Connection.Attempts, err = strconv.Atoi(os.Getenv("DB_CONNECTION_ATTEMPTS"))
+	cfg.Database.Connection.MaxAttempts, err = strconv.Atoi(os.Getenv("DB_CONNECTION_MAX_ATTEMPTS"))
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +59,11 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 	if err != nil {
 		panic(err)
 	}
-	cfg.Client.ConnectionPool.Size, err = strconv.Atoi(os.Getenv("WS_CLIENT_CONNECTION_POOL_SIZE"))
+	cfg.Client.Connection.Pool.Size, err = strconv.Atoi(os.Getenv("WS_CLIENT_CONNECTION_POOL_SIZE"))
+	if err != nil {
+		panic(err)
+	}
+	cfg.Client.Connection.MaxAttempts, err = strconv.Atoi(os.Getenv("WS_CLIENT_CONNECTION_MAX_ATTEMPTS"))
 	if err != nil {
 		panic(err)
 	}

@@ -14,19 +14,24 @@ type AppConfig struct {
 			Password string
 		}
 	}
+
 	Database struct {
 		database.PostgresConfig
 		Connection struct {
-			Attempts   int
-			NextTrySec int
+			MaxAttempts int
+			NextTrySec  int
 		}
 	}
+
 	Client struct {
 		Ping struct {
 			IntervalSec int
 		}
-		ConnectionPool struct {
-			Size int
+		Connection struct {
+			Pool struct {
+				Size int
+			}
+			MaxAttempts int
 		}
 	}
 }
