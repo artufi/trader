@@ -32,7 +32,7 @@ type WSManager struct {
 	sync.RWMutex
 }
 
-// DialForNewClient creates a new client
+// DialForNewClient creates a new client and starts reading messages by this client
 func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header, userID string) (*WSClient, error) {
 	conn, resp, err := wsm.dialer.Dial(url, requestHeader)
 	if err != nil {
@@ -53,7 +53,7 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
 		pending:         make(map[string]*call),
 		UserID:          userID,
-		ReConnCh:        make(chan bool, 1),
+		ReConnCh:        make(chan bool),
 	}
 
 	wsm.addClient(ctx, client)
