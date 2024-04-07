@@ -24,15 +24,22 @@ func main() {
 
 	db := database.MustOpen(database.OpenPool(context.Background(), cfg.Database.PostgresConfig))
 	defer db.Close()
-	err := database.Connect(db, cfg.Database.Connection.Attempts, time.Second*time.Duration(cfg.Database.Connection.NextTrySec))
+	err := database.Connect(db, cfg.Database.Connection.MaxAttempts, time.Duration(cfg.Database.Connection.NextTrySec))
 	if err != nil {
 		logger.Info("Failed to connect with database", logging.ErrorAttr(err))
 		panic(err)
 	}
-	logger.Info("Connected to database", logging.URLAttr(cfg.Database.Host+cfg.Database.Port))
+	logger.Info("Connected to database", logging.URLAttr(cfg.Database.Host+":"+cfg.Database.Port))
 
 	dialer := &ws.Dialer{}
 	wsManager := websocket.NewWSManager(dialer, logger)
+
+	connService := websocket.ConnService{
+		Cfg:       cfg,
+		WSManager: wsManager,
+		Logger:    logger,
+	}
+	connService.OpenConnPool(cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password, cfg.Client.Connection.Pool.Size)
 
 	purchaseC := controller.Purchase{
 		Cfg:               cfg,
