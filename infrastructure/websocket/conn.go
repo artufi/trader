@@ -90,5 +90,7 @@ func (cs ConnService) NewConnection(ctx context.Context, userID, password string
 
 	// set client SSID
 	wsClient.StreamSessionID = loginResponse.StreamSessionId
+	// set client connection number
+	wsClient.ConnID = connNumber
 	return wsClient, nil
 }
