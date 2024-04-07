@@ -14,7 +14,9 @@ import (
 const readTimeout = 10
 
 type WSClient struct {
-	conn    *websocket.Conn
+	ConnID int
+	conn   *websocket.Conn
+
 	manager *WSManager
 	logger  *slog.Logger
 
@@ -44,6 +46,8 @@ func (wsc *WSClient) StopSendRateLimiter() {
 
 func (wsc *WSClient) ReadMessages(ctx context.Context) {
 	defer func() {
+		// send signal to reconnect client
+		close(wsc.ReConnCh)
 		wsc.manager.RemoveClient(ctx, wsc)
 
 		// TODO
@@ -82,9 +86,6 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 				// processing Logout conn (connection) is closed with the close 1006 message.
 				// This situation also occur after too many Writes to XTB by client.
 				wsc.logger.InfoContext(ctx, "Closing reader", logging.ErrorAttr(err))
-
-				// send signal to reconnect client
-				wsc.ReConnCh <- true
 				return
 			}
 
@@ -209,7 +210,6 @@ func (wsc *WSClient) WriteText(ctx context.Context, id string, data []byte) ([]b
 
 func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(time.Second * interval)
-
 	for {
 		select {
 		case <-ticker.C:
