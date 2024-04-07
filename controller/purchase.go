@@ -38,6 +38,7 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			http.Error(w, "No clients assigned to specified user", http.StatusInternalServerError)
 			return
 		}
+		ctx = logging.AppendAttrsCtx(ctx, logging.ConnNo(wsClient.ConnID))
 
 		// init api handler
 		apiH := APIHandler{
@@ -149,14 +150,6 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			p.Logger.InfoContext(ctx, "Inserted order", logging.IDAttr(ordID))
 		}
 
-		// logout user after processing
-		logoutResponse, err := apiH.Logout(ctx)
-		if err != nil {
-			p.Logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
-			return
-		}
-		p.Logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
-
 		p.Logger.InfoContext(ctx, "Purchases request fully processed")
 	}
 }
@@ -175,6 +168,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 			http.Error(w, "No clients assigned to specified user", http.StatusInternalServerError)
 			return
 		}
+		ctx = logging.AppendAttrsCtx(ctx, logging.ConnNo(wsClient.ConnID))
 
 		h := APIHandler{
 			Proc:    processor.NewProc(wsClient),
@@ -235,21 +229,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 			http.Error(w, "Failed to execute TradeTransactionStatus", http.StatusInternalServerError)
 			return
 		}
-
-		//reqStatus, err := tradeResponseStatus.CheckRequestStatus()
-		//if reqStatus == response.ACCEPTED || reqStatus == response.PENDING || reqStatus == response.REJECTED {
-		//	go sendPing(ctx, wsClient, p.Logger, 5)
-		//}
 		p.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
-
-		// logout user after processing
-		logoutResponse, err := h.Logout(ctx)
-		if err != nil {
-			p.Logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))
-			http.Error(w, "Failed to execute TradeTransactionStatus", http.StatusInternalServerError)
-			return
-		}
-		p.Logger.InfoContext(ctx, "Successfully processed Logout", logging.RespAttr(logoutResponse))
 
 		p.Logger.Info("Purchase request fully processed")
 	}
