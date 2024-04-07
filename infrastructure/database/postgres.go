@@ -34,7 +34,7 @@ func Connect(db *sql.DB, maxRetries int, delay time.Duration) error {
 		if err == nil {
 			return nil
 		}
-		time.Sleep(delay)
+		time.Sleep(time.Second * delay)
 	}
 	return fmt.Errorf("postgres connection failed attempts=%d: %w", maxRetries, err)
 }
