@@ -161,7 +161,7 @@ type call struct {
 	Err  error
 }
 
-func (wsc *WSClient) WriteText(ctx context.Context, id string, data []byte) ([]byte, error) {
+func (wsc *WSClient) WriteText(ctx context.Context, messageID string, data []byte) ([]byte, error) {
 	// ticker channel has reference to client, so it calculates time immediately after receiving Tick
 	// it doesn't start timer when entering this method it starts immediately when client is created
 	<-wsc.sendRateLimiter.C
@@ -171,7 +171,7 @@ func (wsc *WSClient) WriteText(ctx context.Context, id string, data []byte) ([]b
 	wsc.logger.InfoContext(ctx, "Writing message", logging.MsgAttr(string(data)))
 
 	c := &call{
-		ID:   id,
+		ID:   messageID,
 		Req:  data,
 		Done: make(chan bool),
 	}
