@@ -1,6 +1,8 @@
 package config
 
-import "github.com/artufi/trader/infrastructure/database"
+import (
+	"github.com/artufi/trader/infrastructure/database"
+)
 
 type AppConfig struct {
 	XTB struct {
@@ -13,7 +15,25 @@ type AppConfig struct {
 		}
 	}
 
-	Database database.PostgresConfig
+	Database struct {
+		database.PostgresConfig
+		Connection struct {
+			MaxAttempts int
+			NextTrySec  int
+		}
+	}
+
+	Client struct {
+		Ping struct {
+			IntervalSec int
+		}
+		Connection struct {
+			Pool struct {
+				Size int
+			}
+			MaxAttempts int
+		}
+	}
 }
 
 type Loader interface {

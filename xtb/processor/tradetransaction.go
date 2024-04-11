@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	tradeTransProc       = "TradeTransaction"
-	tradeTransStatusProc = "TradeTransactionStatus"
+	tradeTransProc       = "tradeTransaction"
+	tradeTransStatusProc = "tradeTransactionStatus"
 )
 
 func (p Proc) TradeTransaction(ctx context.Context, tradeTransInfo command.TradeTransInfo, customTag string) (response.TradeTransaction, error) {

@@ -7,7 +7,7 @@ import (
 	"github.com/artufi/trader/xtb/response"
 )
 
-const loginProc = "Login"
+const loginProc = "login"
 
 func (p Proc) Login(ctx context.Context, customTag, userID, password string) (response.General, error) {
 	loginJSON, err := jsonform.Login(

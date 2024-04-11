@@ -6,31 +6,31 @@ import (
 )
 
 func URLAttr(url string) slog.Attr {
-	return slog.Any("URL", url)
+	return slog.String("URL", url)
 }
 
 func ErrorAttr(err error) slog.Attr {
 	return slog.Any("error", err)
 }
 
-func ClientIPAttr(clientIP string) slog.Attr {
-	return slog.Any("clientIP", clientIP)
+func UserIDAttr(userID string) slog.Attr {
+	return slog.String("userID", userID)
 }
 
-func UserIDAttr(userID string) slog.Attr {
-	return slog.Any("userID", userID)
+func ConnNo(connNumber int) slog.Attr {
+	return slog.Int("connNo", connNumber)
 }
 
 func TraceIDAttr(traceID string) slog.Attr {
-	return slog.Any("traceID", traceID)
+	return slog.String("traceID", traceID)
 }
 
 func MsgAttr(msg string) slog.Attr {
-	return slog.Any("msg", msg)
+	return slog.String("msg", msg)
 }
 
 func SymbolAttr(symbol string) slog.Attr {
-	return slog.Any("symbol", symbol)
+	return slog.String("symbol", symbol)
 }
 
 func PredictionDetailsAttr(predictionDetails model.PredictionDetails) slog.Attr {
@@ -42,5 +42,9 @@ func RespAttr(resp interface{}) slog.Attr {
 }
 
 func IDAttr(id int) slog.Attr {
-	return slog.Any("id", id)
+	return slog.Int("id", id)
+}
+
+func StreamID(ssid string) slog.Attr {
+	return slog.String("streamID", ssid)
 }

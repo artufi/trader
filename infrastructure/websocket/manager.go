@@ -2,12 +2,12 @@ package websocket
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/artufi/trader/controller/middleware"
+	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/logging"
 	"github.com/gorilla/websocket"
 	"log/slog"
+	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -18,49 +18,45 @@ func NewWSManager(dialer *websocket.Dialer, logger *slog.Logger) *WSManager {
 		dialer = &websocket.Dialer{}
 	}
 	return &WSManager{
-		dialer:  dialer,
-		logger:  logger,
-		clients: make(map[*WSClient]struct{}),
+		dialer:      dialer,
+		logger:      logger,
+		userClients: make(map[string]map[*WSClient]struct{}),
 	}
 }
 
 type WSManager struct {
-	dialer  *websocket.Dialer
-	logger  *slog.Logger
-	clients map[*WSClient]struct{}
+	cfg         config.AppConfig
+	dialer      *websocket.Dialer
+	logger      *slog.Logger
+	userClients map[string]map[*WSClient]struct{}
 	sync.RWMutex
 }
 
-// DialForNewClient creates a new client
-func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header) (*WSClient, error) {
-	conn, resp, err := wsh.dialer.Dial(url, requestHeader)
+// DialForNewClient creates a new client and starts reading messages by this client
+func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header, userID string) (*WSClient, error) {
+	conn, resp, err := wsm.dialer.Dial(url, requestHeader)
 	if err != nil {
 		if resp != nil {
 			resp.Body.Close()
-			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url),
+			wsm.logger.ErrorContext(ctx, "Failed to dial websocket", logging.ErrorAttr(err), logging.URLAttr(url),
 				"statusCode", resp.StatusCode)
 		} else {
-			wsh.logger.ErrorContext(ctx, "Failed to dial WebSocket", logging.ErrorAttr(err), logging.URLAttr(url))
+			wsm.logger.ErrorContext(ctx, "Failed to dial websocket", logging.ErrorAttr(err), logging.URLAttr(url))
 		}
-		return nil, fmt.Errorf("failed to establish Websocket connection: %w", err)
-	}
-
-	connDetails, ok := ctx.Value(middleware.ConnDetailsKey).(middleware.ConnDetails)
-	if !ok {
-		return nil, errors.New("no connection details")
+		return nil, fmt.Errorf("manager failed to establish websocket connection: %w", err)
 	}
 
 	client := &WSClient{
 		conn:            conn,
-		manager:         wsh,
-		logger:          wsh.logger,
+		manager:         wsm,
+		logger:          wsm.logger,
 		sendRateLimiter: time.NewTicker(200 * time.Millisecond),
 		pending:         make(map[string]*call),
-		userID:          connDetails.UserID,
-		ip:              connDetails.IPAddr,
+		UserID:          userID,
+		ReConnCh:        make(chan bool),
 	}
 
-	wsh.addClient(ctx, client)
+	wsm.addClient(ctx, client)
 
 	// read client messages
 	go client.ReadMessages(ctx)
@@ -68,22 +64,42 @@ func (wsh *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 	return client, nil
 }
 
-func (wsh *WSManager) addClient(ctx context.Context, client *WSClient) {
-	wsh.Lock()
-	defer wsh.Unlock()
+func (wsm *WSManager) addClient(ctx context.Context, client *WSClient) {
+	wsm.Lock()
+	defer wsm.Unlock()
 
-	wsh.logger.InfoContext(ctx, "Adding new client")
-	wsh.clients[client] = struct{}{}
+	wsm.logger.InfoContext(ctx, "Adding a new client")
+	if clients, ok := wsm.userClients[client.UserID]; ok {
+		clients[client] = struct{}{}
+	} else {
+		wsm.userClients[client.UserID] = make(map[*WSClient]struct{})
+		wsm.userClients[client.UserID][client] = struct{}{}
+	}
 }
 
-func (wsh *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
-	wsh.Lock()
-	defer wsh.Unlock()
+func (wsm *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
+	wsm.Lock()
+	defer wsm.Unlock()
 
-	if _, ok := wsh.clients[client]; ok {
-		wsh.logger.InfoContext(ctx, "Disconnecting client")
-		client.CloseConnection()
-		client.StopSendRateLimiter()
-		delete(wsh.clients, client)
+	if clients, ok := wsm.userClients[client.UserID]; ok {
+		if _, ok := clients[client]; ok {
+			wsm.logger.InfoContext(ctx, "Disconnecting one of user's client")
+			client.CloseConnection()
+			client.StopSendRateLimiter()
+			delete(clients, client)
+		}
 	}
+}
+
+func (wsm *WSManager) GetUserRandomClient(userID string) (*WSClient, error) {
+	if clients, ok := wsm.userClients[userID]; ok {
+		var clientList []*WSClient
+		for client := range clients {
+			clientList = append(clientList, client)
+		}
+		if len(clientList) > 0 {
+			return clientList[rand.Intn(len(clientList))], nil
+		}
+	}
+	return nil, fmt.Errorf("manager: no clients for user: %v", userID)
 }
