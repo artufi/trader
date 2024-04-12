@@ -31,7 +31,8 @@ type AppConfig struct {
 			Pool struct {
 				Size int
 			}
-			MaxAttempts int
+			MaxAttempts         int
+			ReConnectNextTrySec int
 		}
 	}
 }

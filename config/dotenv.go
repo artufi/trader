@@ -67,6 +67,10 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 	if err != nil {
 		panic(err)
 	}
+	cfg.Client.Connection.ReConnectNextTrySec, err = strconv.Atoi(os.Getenv("WS_CLIENT_CONNECTION_RECONNECT_NEXT_TRY_TIME_SEC"))
+	if err != nil {
+		panic(err)
+	}
 
 	return cfg, nil
 }

@@ -5,6 +5,10 @@ import (
 	"log/slog"
 )
 
+func AttemptAttr(attempt int) slog.Attr {
+	return slog.Int("attempt", attempt)
+}
+
 func URLAttr(url string) slog.Attr {
 	return slog.String("URL", url)
 }
@@ -31,6 +35,10 @@ func MsgAttr(msg string) slog.Attr {
 
 func SymbolAttr(symbol string) slog.Attr {
 	return slog.String("symbol", symbol)
+}
+
+func ServiceName(service string) slog.Attr {
+	return slog.String("service", service)
 }
 
 func PredictionDetailsAttr(predictionDetails model.PredictionDetails) slog.Attr {
