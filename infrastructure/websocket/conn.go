@@ -42,21 +42,26 @@ func (cs ConnService) OpenConnPool(userId, password string, size int) {
 	go func() {
 		ctx := logging.AppendAttrsCtx(context.Background(), logging.UserIDAttr(userId), logging.ServiceName(ServiceName))
 		for connNumber := 1; connNumber <= size; connNumber++ {
+			ctx := logging.AppendAttrsCtx(ctx, logging.ConnNo(connNumber))
 			go cs.keepUserClientConnected(ctx, userId, password, connNumber)
 		}
 	}()
 }
 
 func (cs ConnService) keepUserClientConnected(ctx context.Context, userId, password string, connNumber int) {
-	logging.AppendAttrsCtx(ctx, logging.ConnNo(connNumber))
 	attempt := 1
+	// log old streamSessionID to trace connections
+	var oldSSID string
 	for {
-		wsClient, err := cs.newConnection(ctx, userId, password, connNumber)
+		// new variable to prevent adding the same key more than once
+		// initial connection does not have oldStreamID
+		oldSSIDCtx := logging.AppendAttrsCtx(ctx, logging.OldStreamID(oldSSID))
+		wsClient, err := cs.newConnection(oldSSIDCtx, userId, password, connNumber)
 		if err != nil {
-			cs.Logger.WarnContext(ctx, "Unable to login client at the moment", logging.ErrorAttr(err),
+			cs.Logger.WarnContext(oldSSIDCtx, "Unable to login client at the moment", logging.ErrorAttr(err),
 				logging.AttemptAttr(attempt))
 			if attempt == cs.Cfg.Client.Connection.MaxAttempts {
-				cs.Logger.ErrorContext(ctx, "Critical error connection could not be established")
+				cs.Logger.ErrorContext(oldSSIDCtx, "Critical error connection could not be established")
 				// TODO
 				// in future maybe send email
 				return
@@ -65,12 +70,15 @@ func (cs ConnService) keepUserClientConnected(ctx context.Context, userId, passw
 			time.Sleep(time.Second * time.Duration(cs.Cfg.Client.Connection.ReConnectNextTrySec))
 			continue
 		}
-		ctx = logging.AppendAttrsCtx(ctx, logging.StreamID(wsClient.StreamSessionID))
-		go wsClient.Ping(ctx, time.Duration(cs.Cfg.Client.Ping.IntervalSec))
+		// new variable to prevent adding the same key more than once
+		newSSIDCtx := logging.AppendAttrsCtx(oldSSIDCtx, logging.StreamID(wsClient.StreamSessionID))
+		oldSSID = wsClient.StreamSessionID
+		go wsClient.Ping(newSSIDCtx, time.Duration(cs.Cfg.Client.Ping.IntervalSec))
+
 		select {
 		// listen for client disconnections
 		case <-wsClient.ReConnCh:
-			cs.Logger.InfoContext(ctx, "Client disconnected trying to reconnect...")
+			cs.Logger.InfoContext(newSSIDCtx, "Client disconnected trying to reconnect...")
 		}
 	}
 }

@@ -53,6 +53,10 @@ func IDAttr(id int) slog.Attr {
 	return slog.Int("id", id)
 }
 
+func OldStreamID(oldSSID string) slog.Attr {
+	return slog.String("oldStreamID", oldSSID)
+}
+
 func StreamID(ssid string) slog.Attr {
 	return slog.String("streamID", ssid)
 }
