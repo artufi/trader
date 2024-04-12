@@ -16,7 +16,7 @@ const (
 	// Time allowed to write a message to the peer.
 	writeWait = time.Second * 5
 	// Time allowed to read a message from the peer.
-	readWait = time.Second * 5
+	//readWait = time.Second * 60
 
 	// Maximum message size allowed from peer.
 	// 100 KB
@@ -74,7 +74,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 
 	// setup reader
 	wsc.conn.SetReadLimit(maxMessageSize)
-	wsc.conn.SetReadDeadline(time.Now().Add(readWait))
+	//wsc.conn.SetReadDeadline(time.Now().Add(readWait))
 
 	chanBreaker := time.NewTimer(time.Second * receiverTimeout)
 	for {
