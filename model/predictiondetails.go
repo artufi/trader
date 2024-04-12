@@ -26,23 +26,26 @@ type PredictionDetails struct {
 }
 
 const (
-	BUY  = "Buy"
-	SELL = "Sell"
+	Buy      = "Buy"
+	Sell     = "Sell"
+	NoAction = "NoAction"
 )
 
 func (pd PredictionDetails) PrepareTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// TODO what if 0?
 	switch pd.ModelSetup.ModelType {
-	case BUY:
+	case Buy:
 		if pd.TakeProfit >= 0 {
 			return pd.prepareBUYTradeTransInfo(symbolData, volumeToBuy)
 		}
-	case SELL:
+	case Sell:
 		if pd.TakeProfit < 0 {
 			return pd.prepareSELLTradeTransInfo(symbolData, volumeToBuy)
 		}
+	case NoAction:
+		return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: %q", NoAction)
 	}
-	return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: UNKNOWN ModelType")
+	return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: Unknown ModelType: %q", pd.ModelSetup.ModelType)
 }
 
 func (pd PredictionDetails) prepareBUYTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
