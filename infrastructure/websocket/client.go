@@ -11,7 +11,17 @@ import (
 	"time"
 )
 
-const readTimeout = 10
+const (
+	receiverTimeout = 10
+	// Time allowed to write a message to the peer.
+	writeWait = time.Second * 5
+	// Time allowed to read a message from the peer.
+	readWait = time.Second * 5
+
+	// Maximum message size allowed from peer.
+	// 100 KB
+	maxMessageSize = 102400
+)
 
 type WSClient struct {
 	ConnID int
@@ -62,7 +72,11 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 		wsc.mutex.Unlock()
 	}()
 
-	chanBreaker := time.NewTimer(time.Second * readTimeout)
+	// setup reader
+	wsc.conn.SetReadLimit(maxMessageSize)
+	wsc.conn.SetReadDeadline(time.Now().Add(readWait))
+
+	chanBreaker := time.NewTimer(time.Second * receiverTimeout)
 	for {
 		select {
 		// *http.Request context is done after processing request
@@ -107,7 +121,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 			// ---
 			// This step prevents the immediate reading from the timer's channel and
 			// allows for the timer to be reset for the next Read operation.
-			chanBreaker.Reset(time.Second * readTimeout)
+			chanBreaker.Reset(time.Second * receiverTimeout)
 
 			// read customTag from response to link to request
 			customTag := struct {
@@ -180,6 +194,7 @@ func (wsc *WSClient) WriteText(ctx context.Context, messageID string, data []byt
 	wsc.mutex.Lock()
 	// add request to pending map to match with response
 	wsc.pending[c.ID] = c
+	wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
 	err := wsc.conn.WriteMessage(websocket.TextMessage, data)
 	wsc.mutex.Unlock()
 	if err != nil {
@@ -188,7 +203,7 @@ func (wsc *WSClient) WriteText(ctx context.Context, messageID string, data []byt
 	// start timer after writing message
 	// TODO
 	// maybe instantiate when creating client?
-	chanBreaker := time.NewTimer(time.Second * readTimeout)
+	chanBreaker := time.NewTimer(time.Second * receiverTimeout)
 
 	select {
 	case _, ok := <-c.Done:
@@ -214,6 +229,7 @@ func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 		select {
 		case <-ticker.C:
 			wsc.logger.InfoContext(ctx, "Ping")
+			wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			err := wsc.conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				wsc.logger.ErrorContext(ctx, "Error while writing Ping message", logging.ErrorAttr(err))
