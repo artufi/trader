@@ -35,8 +35,8 @@ type TradeTransInfo struct {
 	Cmd           operationCodeCmd `json:"cmd"`
 	CustomComment string           `json:"customComment,omitempty"`
 	Expiration    int64            `json:"expiration"`
-	Offset        int              `json:"offset,omitempty"`
-	Order         int              `json:"order,omitempty"`
+	Offset        *int             `json:"offset,omitempty"`
+	Order         *int             `json:"order,omitempty"`
 	Price         float64          `json:"price"`
 	Sl            float64          `json:"sl,omitempty"`
 	Symbol        string           `json:"symbol"`
