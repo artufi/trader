@@ -40,7 +40,7 @@ func (ps PredictionService) Insert(p Prediction) (int, error) {
 
 	err := row.Scan(&p.ID)
 	if err != nil {
-		return -1, fmt.Errorf("insert prediction: %w", err)
+		return p.ID, fmt.Errorf("insert prediction: %w", err)
 	}
 	return p.ID, nil
 }

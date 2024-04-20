@@ -48,6 +48,8 @@ func (pd PredictionDetails) PrepareTradeTransInfo(symbolData response.GetSymbolE
 	return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: Unknown ModelType: %q", pd.ModelSetup.ModelType)
 }
 
+// TODO
+// what about order and offset?
 func (pd PredictionDetails) prepareBUYTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// precision to two decimal places
 	precision := math.Pow(10, 2)
