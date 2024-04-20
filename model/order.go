@@ -8,13 +8,21 @@ import (
 )
 
 type Order struct {
-	ID            int
-	Number        int
-	UserID        int
-	PredictionID  int
+	// PRIMARY KEY
+	ID int
+	// xtb order no
+	Number int
+	UserID int
+	// from PredictionDetails
+	PredictionID int
+
+	// from TradeTransactionStatus
 	RequestStatus string
 	Message       string
+
 	command.TradeTransInfo
+
+	OrderClosedDetails
 }
 
 type OrderService struct {
@@ -30,21 +38,67 @@ func (os OrderService) Insert(o Order) (int, error) {
 			 symbol,
 			 operation_code_cmd,
 			 transaction_type,
+			 custom_comment,
 			 expiration,
+			 offst,
+			 ordr,
 			 price,
 			 stop_loss,
 			 take_profit,
 			 volume,
-			 request_status,
-			 message,
+			 tts_request_status,
+			 tts_message,
+			 open_price,
+			 close_price,
+			 profit,
+			 closed,
+			 comment,
+			 open_time,
+			 close_time,
 			 created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-		RETURNING id`, o.Number, o.UserID, o.PredictionID, o.Symbol, o.Cmd, o.Type, o.Expiration, o.Price, o.Sl, o.Tp, o.Volume,
-		o.RequestStatus, o.Message, time.Now())
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 
+		        $23, $24)
+		RETURNING id`, o.Number, o.UserID, o.PredictionID, o.Symbol, o.Cmd, o.Type, o.CustomComment, o.Expiration,
+		o.Offset, o.Order, o.Price, o.Sl, o.Tp, o.Volume, o.RequestStatus, o.Message, o.OpenPrice, o.ClosePrice,
+		o.Profit, o.Closed, o.Comment, o.OpenTime, o.CloseTime, time.Now())
 
 	err := row.Scan(&o.ID)
 	if err != nil {
 		return o.ID, fmt.Errorf("insert order: %w", err)
 	}
 	return o.ID, nil
+}
+
+type OrderClosedDetails struct {
+	// store nulls in the database to avoid ambiguity between zero values
+	OpenPrice  *float64
+	ClosePrice *float64
+	Profit     *float64
+	Closed     bool
+	Comment    *string
+	OpenTime   *time.Time
+	CloseTime  *time.Time
+}
+
+func (os OrderService) UpdateClosed(orderId int, details OrderClosedDetails) (int, error) {
+	row := os.DB.QueryRow(`
+		UPDATE orders
+		SET 
+		    open_price = $3,
+		    close_price = $2,
+		    profit = $4, 
+		    closed = $5,
+		    comment = $6,
+		    open_time = $7,
+		    close_time = $8
+		WHERE order_no = $1
+		RETURNING id`, orderId, details.OpenPrice, details.ClosePrice, details.Profit, details.Closed,
+		details.Comment, details.OpenTime, details.CloseTime)
+
+	var id int
+	err := row.Scan(&id)
+	if err != nil {
+		return id, fmt.Errorf("update order: %w", err)
+	}
+	return id, nil
 }
