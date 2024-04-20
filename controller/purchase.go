@@ -38,7 +38,7 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			http.Error(w, "No clients assigned to specified user", http.StatusInternalServerError)
 			return
 		}
-		ctx = logging.AppendAttrsCtx(ctx, logging.ConnNo(wsClient.ConnID))
+		ctx = logging.AppendAttrsCtx(ctx, logging.ConnNo(wsClient.ConnID), logging.StreamID(wsClient.StreamSessionID))
 
 		// init api handler
 		apiH := APIHandler{

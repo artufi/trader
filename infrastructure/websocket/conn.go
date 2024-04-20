@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const ServiceName = "ConnService"
+const serviceName = "ConnService"
 
 type ConnService struct {
 	Cfg    config.AppConfig
@@ -40,7 +40,7 @@ type ConnService struct {
 //	}
 func (cs ConnService) OpenConnPool(userId, password string, size int) {
 	go func() {
-		ctx := logging.AppendAttrsCtx(context.Background(), logging.UserIDAttr(userId), logging.ServiceName(ServiceName))
+		ctx := logging.AppendAttrsCtx(context.Background(), logging.UserIDAttr(userId), logging.ServiceName(serviceName))
 		for connNumber := 1; connNumber <= size; connNumber++ {
 			ctx := logging.AppendAttrsCtx(ctx, logging.ConnNo(connNumber))
 			go cs.keepUserClientConnected(ctx, userId, password, connNumber)
@@ -72,17 +72,18 @@ func (cs ConnService) keepUserClientConnected(ctx context.Context, userId, passw
 		}
 		// new variable to prevent adding the same key more than once
 		newSSIDCtx := logging.AppendAttrsCtx(oldSSIDCtx, logging.StreamID(wsClient.StreamSessionID))
-		oldSSID = wsClient.StreamSessionID
 		go wsClient.Ping(newSSIDCtx, time.Duration(cs.Cfg.Client.Ping.IntervalSec))
 
 		select {
 		// listen for client disconnections
 		case <-wsClient.ReConnCh:
+			oldSSID = wsClient.StreamSessionID
 			cs.Logger.InfoContext(newSSIDCtx, "Client disconnected trying to reconnect...")
 		}
 	}
 }
 
+// TODO do not allow further processing when at least one connection is not established
 func (cs ConnService) newConnection(ctx context.Context, userID, password string, connNumber int) (*WSClient, error) {
 	cs.Logger.InfoContext(ctx, "Start establishing user connection")
 	wsClient, err := cs.WSManager.DialForNewClient(ctx, cs.Cfg.XTB.Demo.WebSocketURL, nil, userID)
