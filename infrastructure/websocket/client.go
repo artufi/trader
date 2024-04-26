@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/artufi/trader/logging"
+	"github.com/artufi/trader/xtb/jsonform"
 	"github.com/gorilla/websocket"
 	"log/slog"
 	"sync"
@@ -41,6 +42,7 @@ type WSClient struct {
 
 	UserID          string
 	StreamSessionID string
+	Stream          bool
 
 	// Buffer size 1 is required to not block client ReadMessages
 	ReConnCh chan bool
@@ -235,13 +237,15 @@ func (wsc *WSClient) WriteText(ctx context.Context, messageID string, data []byt
 		case <-chanBreaker.C:
 			return nil, fmt.Errorf("client writer timeout while waiting for channel response: protection against goroutine leak")
 
-		// context done can be triggered while sending message
+		// context done can be triggered while waiting for a response
 		case <-ctx.Done():
 			return nil, fmt.Errorf("client writer context done while waiting for a response: %w", ctx.Err())
 		}
 	}
 }
 
+// Ping is better to be invoked outside of manager to pass context with more information as manager
+// does not have all of them when Dialing for a new client
 func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(time.Second * interval)
 	for {
@@ -257,6 +261,112 @@ func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 		case <-ctx.Done():
 			err := ctx.Err()
 			wsc.logger.ErrorContext(ctx, "Client Ping operation canceled - context done", logging.ErrorAttr(err))
+			return
+		}
+	}
+}
+
+type WSClientStream struct {
+	ConnID int
+	conn   *websocket.Conn
+
+	client  *WSClient
+	manager *WSManager
+	logger  *slog.Logger
+
+	// User should send requests in 200 ms intervals.
+	// This rule can be broken, but if it happens 6 times in a row the connection is dropped.
+	sendRateLimiter *time.Ticker
+
+	UserID          string
+	StreamSessionID string
+}
+
+func (wsc *WSClientStream) FreeClient() {
+	if wsc.client != nil {
+		wsc.client.Stream = false
+	}
+}
+
+func (wsc *WSClientStream) CloseConnection() {
+	wsc.conn.Close()
+}
+
+func (wsc *WSClientStream) StopSendRateLimiter() {
+	wsc.sendRateLimiter.Stop()
+}
+
+func (wsc *WSClientStream) ReadMessages(ctx context.Context) ([]byte, error) {
+	// setup reader
+	//wsc.conn.SetReadLimit(maxMessageSize)
+	//wsc.conn.SetReadDeadline(time.Now().Add(readWait))
+
+	for {
+		select {
+		// context done can be triggered before any message is read
+		case <-ctx.Done():
+			return nil, fmt.Errorf("client stream reader context done before reading messages: %w", ctx.Err())
+		// conn.ReadMessage is blocking so default case here is not the best pick
+		// but context can be done before Read, so it makes sense
+		default:
+			// blocking method
+			// to better fit with ctx.Done use goroutine
+			_, response, err := wsc.conn.ReadMessage()
+			if err != nil {
+				return nil, fmt.Errorf("client stream reader failure: %w", err)
+			}
+
+			select {
+			// context is done, no one want response
+			case <-ctx.Done():
+				return nil, fmt.Errorf("client stream reader operation canceled - context done: %w", ctx.Err())
+			default:
+				return response, nil
+			}
+		}
+	}
+}
+
+func (wsc *WSClientStream) WriteText(ctx context.Context, messageID string, data []byte) ([]byte, error) {
+	select {
+	// do not process message if context is done before writing message
+	case <-ctx.Done():
+		return nil, fmt.Errorf("client stream writer context done before writing message: %w", ctx.Err())
+
+	// ticker channel has reference to client, so it calculates time immediately after receiving Tick
+	// it doesn't start timer when entering this method it starts immediately when client is created
+	case <-wsc.sendRateLimiter.C:
+		wsc.logger.InfoContext(ctx, "Writing stream message", logging.MsgAttr(string(data)))
+
+		wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		err := wsc.conn.WriteMessage(websocket.TextMessage, data)
+		if err != nil {
+			return nil, fmt.Errorf("client stream writer failed to write message through websocket: %w", err)
+		}
+		return nil, nil
+	}
+}
+
+func (wsc *WSClientStream) Ping(ctx context.Context, interval time.Duration, ssid string) {
+	ticker := time.NewTicker(time.Second * interval)
+	for {
+		select {
+		case <-ticker.C:
+			wsc.logger.InfoContext(ctx, "Ping stream")
+			pingStreamJSON, err := jsonform.PingStream(ssid)
+			if err != nil {
+				wsc.logger.ErrorContext(ctx, "Failed to serialize pingStream", logging.ErrorAttr(err))
+				return
+			}
+			wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			err = wsc.conn.WriteMessage(websocket.TextMessage, pingStreamJSON)
+			if err != nil {
+				wsc.logger.ErrorContext(ctx, "Client stream failed to write Ping message", logging.ErrorAttr(err))
+				return
+			}
+		case <-ctx.Done():
+			err := ctx.Err()
+			wsc.logger.ErrorContext(ctx, "Client stream Ping operation canceled - context done", logging.ErrorAttr(err))
 			return
 		}
 	}
