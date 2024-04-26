@@ -137,6 +137,9 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 						RequestStatus:  rsErr.RequestStatus,
 						Message:        rsErr.Message,
 						TradeTransInfo: tradeTransInfo,
+						OrderClosedDetails: model.OrderClosedDetails{
+							Closed: true,
+						},
 					}
 				}
 			}
