@@ -11,13 +11,13 @@ const (
 	getTradesStreamProc = "getTradesStream"
 )
 
-func (p Proc) GetTrades(ctx context.Context, customTag string, onlyOpened bool) (response.TradeResponse, error) {
+func (p Proc) GetTrades(ctx context.Context, customTag string, onlyOpened bool) (response.GetTrade, error) {
 	getTradesJSON, err := jsonform.GetTrades(customTag, onlyOpened)
 	if err != nil {
-		return response.TradeResponse{}, &ProcError{Processor: getTradesProc, Err: err}
+		return response.GetTrade{}, &ProcError{Processor: getTradesProc, Err: err}
 	}
 
-	return process[response.TradeResponse](ctx, p.client, customTag, getTradesJSON, getTradesProc)
+	return process[response.GetTrade](ctx, p.client, customTag, getTradesJSON, getTradesProc)
 }
 
 func (p Proc) GetTradesStream(ctx context.Context, sessionID string) ([]byte, error) {
