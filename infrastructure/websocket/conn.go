@@ -38,10 +38,13 @@ type ConnService struct {
 //			 }
 //		 }
 //	}
-func (cs ConnService) OpenConnPool(userId, password string, size int) {
+func (cs ConnService) OpenConnPool(userId, password string, initSize int) {
 	go func() {
 		ctx := logging.AppendAttrsCtx(context.Background(), logging.UserIDAttr(userId), logging.ServiceName(serviceName))
-		for connNumber := 1; connNumber <= size; connNumber++ {
+		if initSize < 1 {
+			cs.Logger.WarnContext(ctx, "Connection pool initial size not specified")
+		}
+		for connNumber := 1; connNumber <= initSize; connNumber++ {
 			ctx := logging.AppendAttrsCtx(ctx, logging.ConnNo(connNumber))
 			go cs.keepUserClientConnected(ctx, userId, password, connNumber)
 		}
