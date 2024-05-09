@@ -4,7 +4,7 @@ type GetTrades struct {
 	Command   string `json:"command"`
 	Arguments struct {
 		OpenedOnly bool `json:"openedOnly"`
-	} `json:"arguments"`
+	} `json:"arguments,omitempty"`
 	CustomTag string `json:"customTag"`
 }
 

@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	getTrades        = "getTrades"
-	getTradesHistory = "getTradesHistory"
+	getTrades = "getTrades"
 )
 
 func GetTrades(customTag string, openedOnly bool) ([]byte, error) {
