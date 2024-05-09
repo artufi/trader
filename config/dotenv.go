@@ -36,6 +36,7 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 	}
 
 	cfg.XTB.Demo.WebSocketURL = os.Getenv("WEBSOCKET_URL")
+	cfg.XTB.Demo.WebSocketStreamURL = os.Getenv("WEBSOCKET_STREAM_URL")
 
 	cfg.XTB.Demo.UserID = os.Getenv("USER_ID")
 	cfg.XTB.Demo.Password = os.Getenv("USER_PASSWORD")

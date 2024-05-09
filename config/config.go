@@ -7,8 +7,8 @@ import (
 type AppConfig struct {
 	XTB struct {
 		Demo struct {
-			WebSocketURL    string
-			WebSocketTLSURL string
+			WebSocketURL       string
+			WebSocketStreamURL string
 
 			UserID   string
 			Password string
