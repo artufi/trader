@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-const serviceName = "ConnService"
+const serviceName = "ConnManager"
 
-type ConnService struct {
+type ConnManager struct {
 	Cfg    config.AppConfig
 	Logger *slog.Logger
 
@@ -38,17 +38,20 @@ type ConnService struct {
 //			 }
 //		 }
 //	}
-func (cs ConnService) OpenConnPool(userId, password string, size int) {
+func (cs ConnManager) OpenConnPool(userId, password string, initSize int) {
 	go func() {
 		ctx := logging.AppendAttrsCtx(context.Background(), logging.UserIDAttr(userId), logging.ServiceName(serviceName))
-		for connNumber := 1; connNumber <= size; connNumber++ {
+		if initSize < 1 {
+			cs.Logger.WarnContext(ctx, "Connection pool initial size not specified")
+		}
+		for connNumber := 1; connNumber <= initSize; connNumber++ {
 			ctx := logging.AppendAttrsCtx(ctx, logging.ConnNo(connNumber))
 			go cs.keepUserClientConnected(ctx, userId, password, connNumber)
 		}
 	}()
 }
 
-func (cs ConnService) keepUserClientConnected(ctx context.Context, userId, password string, connNumber int) {
+func (cs ConnManager) keepUserClientConnected(ctx context.Context, userId, password string, connNumber int) {
 	attempt := 1
 	// log old streamSessionID to trace connections
 	var oldSSID string
@@ -64,6 +67,7 @@ func (cs ConnService) keepUserClientConnected(ctx context.Context, userId, passw
 				cs.Logger.ErrorContext(oldSSIDCtx, "Critical error connection could not be established")
 				// TODO
 				// in future maybe send email
+				panic("critical error connection could not be established check logs and XTB platform")
 				return
 			}
 			attempt++
@@ -84,7 +88,7 @@ func (cs ConnService) keepUserClientConnected(ctx context.Context, userId, passw
 }
 
 // TODO do not allow further processing when at least one connection is not established
-func (cs ConnService) newConnection(ctx context.Context, userID, password string, connNumber int) (*WSClient, error) {
+func (cs ConnManager) newConnection(ctx context.Context, userID, password string, connNumber int) (*WSClient, error) {
 	cs.Logger.InfoContext(ctx, "Start establishing user connection")
 	wsClient, err := cs.WSManager.DialForNewClient(ctx, cs.Cfg.XTB.Demo.WebSocketURL, nil, userID)
 	if err != nil {

@@ -39,5 +39,14 @@ func process[T any](ctx context.Context, client Client, id string, data []byte, 
 		return result, &ProcError{Processor: processor, Err: err}
 	}
 
-	return result, err
+	return result, nil
+}
+
+func processStream(ctx context.Context, client Client, id string, data []byte, processor string) ([]byte, error) {
+	respBytes, err := client.WriteText(ctx, id, data)
+	if err != nil {
+		return respBytes, &ProcError{Processor: processor, Err: err}
+	}
+
+	return respBytes, nil
 }

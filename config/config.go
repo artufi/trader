@@ -7,8 +7,8 @@ import (
 type AppConfig struct {
 	XTB struct {
 		Demo struct {
-			WebSocketURL    string
-			WebSocketTLSURL string
+			WebSocketURL       string
+			WebSocketStreamURL string
 
 			UserID   string
 			Password string
@@ -34,6 +34,15 @@ type AppConfig struct {
 			MaxAttempts         int
 			ReConnectNextTrySec int
 		}
+		Stream struct {
+			Ping struct {
+				IntervalSec int
+			}
+		}
+	}
+
+	BuySellParams struct {
+		Volume float64
 	}
 }
 

@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/model"
@@ -41,10 +40,9 @@ func (h DBHandler) InsertPrediction(ctx context.Context, prediction model.Predic
 }
 
 func (h DBHandler) handleInsertionError(ctx context.Context, err error, id int, operation string) (int, error) {
+	// Auto increment on database ID, if record is inserted then id is always != 0
 	if id == 0 {
-		h.Logger.ErrorContext(ctx, fmt.Sprintf("Failed to insert %s: no rows affected", operation),
-			logging.ErrorAttr(err))
-		return -1, fmt.Errorf("insert order: %w", sql.ErrNoRows)
+		return -1, fmt.Errorf("insert no rows affected: %v", err)
 	}
 	h.Logger.WarnContext(ctx,
 		fmt.Sprintf("Error occurred while inserting %s but record was inserted successfully", operation),

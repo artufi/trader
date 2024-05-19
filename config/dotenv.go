@@ -36,6 +36,7 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 	}
 
 	cfg.XTB.Demo.WebSocketURL = os.Getenv("WEBSOCKET_URL")
+	cfg.XTB.Demo.WebSocketStreamURL = os.Getenv("WEBSOCKET_STREAM_URL")
 
 	cfg.XTB.Demo.UserID = os.Getenv("USER_ID")
 	cfg.XTB.Demo.Password = os.Getenv("USER_PASSWORD")
@@ -68,6 +69,16 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 		panic(err)
 	}
 	cfg.Client.Connection.ReConnectNextTrySec, err = strconv.Atoi(os.Getenv("WS_CLIENT_CONNECTION_RECONNECT_NEXT_TRY_TIME_SEC"))
+	if err != nil {
+		panic(err)
+	}
+
+	cfg.Client.Stream.Ping.IntervalSec, err = strconv.Atoi(os.Getenv("WS_CLIENT_STREAM_PING_INTERVAL_SEC"))
+	if err != nil {
+		panic(err)
+	}
+
+	cfg.BuySellParams.Volume, err = strconv.ParseFloat(os.Getenv("VOLUME_TO_BUY_SELL"), 64)
 	if err != nil {
 		panic(err)
 	}
