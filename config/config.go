@@ -34,6 +34,15 @@ type AppConfig struct {
 			MaxAttempts         int
 			ReConnectNextTrySec int
 		}
+		Stream struct {
+			Ping struct {
+				IntervalSec int
+			}
+		}
+	}
+
+	BuySellParams struct {
+		Volume float64
 	}
 }
 

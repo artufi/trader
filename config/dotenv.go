@@ -73,5 +73,15 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 		panic(err)
 	}
 
+	cfg.Client.Stream.Ping.IntervalSec, err = strconv.Atoi(os.Getenv("WS_CLIENT_STREAM_PING_INTERVAL_SEC"))
+	if err != nil {
+		panic(err)
+	}
+
+	cfg.BuySellParams.Volume, err = strconv.ParseFloat(os.Getenv("VOLUME_TO_BUY_SELL"), 64)
+	if err != nil {
+		panic(err)
+	}
+
 	return cfg, nil
 }
