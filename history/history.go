@@ -48,11 +48,11 @@ func (hs *HService) GetTrades(ctx context.Context, userID string) {
 	for _, tradeRecord := range getTradesResp.ReturnData {
 		if tradeRecord.Closed {
 			updateDetails := model.OrderClosedDetails{
-				ClosePrice: &tradeRecord.OpenPrice,
-				OpenPrice:  &tradeRecord.ClosePrice,
-				Profit:     &tradeRecord.Profit,
+				ClosePrice: tradeRecord.OpenPrice,
+				OpenPrice:  tradeRecord.ClosePrice,
+				Profit:     tradeRecord.Profit,
 				Closed:     tradeRecord.Closed,
-				Comment:    &tradeRecord.Comment,
+				Comment:    tradeRecord.Comment,
 				OpenTime:   nil,
 				CloseTime:  nil,
 			}
@@ -97,7 +97,7 @@ func (hs *HService) GetTrades(ctx context.Context, userID string) {
 func (hs *HService) GetTradesStream(userID string) {
 	ctx := logging.AppendAttrsCtx(context.Background(), logging.ServiceName(serviceName))
 	for {
-		wsClientStream, err := hs.WSManager.DialForNewStreamClient(ctx, "wss://ws.xtb.com/demoStream", nil, userID)
+		wsClientStream, err := hs.WSManager.DialForNewStreamClient(ctx, hs.Cfg.XTB.Demo.WebSocketStreamURL, nil, userID)
 		if err != nil {
 			hs.Logger.ErrorContext(ctx, "Failed to get client to process getTradesStream, will try again...",
 				logging.ErrorAttr(err))
@@ -107,10 +107,6 @@ func (hs *HService) GetTradesStream(userID string) {
 		ssid := wsClientStream.StreamSessionID
 		ctx := logging.AppendAttrsCtx(ctx, logging.StreamID(ssid))
 
-		go func() {
-			wsClientStream.Ping(ctx, time.Duration(59), ssid)
-		}()
-
 		proc := processor.NewProc(wsClientStream)
 		_, err = proc.GetTradesStream(ctx, ssid)
 		if err != nil {
@@ -118,14 +114,14 @@ func (hs *HService) GetTradesStream(userID string) {
 			continue
 		}
 		for {
-			resp, err := wsClientStream.ReadMessages(ctx)
-			if err != nil {
-				hs.Logger.ErrorContext(ctx, "Failed read getTradesStream", logging.ErrorAttr(err))
+			resp := <-wsClientStream.ReaderRespCh
+			if resp.Err != nil {
+				hs.Logger.ErrorContext(ctx, "Failed read getTradesStream", logging.ErrorAttr(resp.Err))
 				break
 			}
 
 			tradeResponseStream := response.GetTradeStream{}
-			err = json.Unmarshal(resp, &tradeResponseStream)
+			err = json.Unmarshal(resp.Data, &tradeResponseStream)
 			if err != nil {
 				hs.Logger.ErrorContext(ctx, "Failed to deserialize getTradesStream", logging.ErrorAttr(err))
 				continue
@@ -156,14 +152,16 @@ func (hs *HService) GetTradesStream(userID string) {
 			if !tradeData.Closed && tradeData.Type != int(command.PENDING) {
 				hs.OrdersByPosition[position] = tradeData.Order2
 			} else if tradeData.Closed && tradeData.Type == int(command.CLOSE) {
+				openTime := time.Unix(int64(*tradeData.OpenTime), 0)
+				closeTime := time.Unix(int64(*tradeData.CloseTime), 0)
 				updateDetails := model.OrderClosedDetails{
-					ClosePrice: &tradeData.OpenPrice,
-					OpenPrice:  &tradeData.ClosePrice,
-					Profit:     &tradeData.Profit,
+					ClosePrice: tradeData.ClosePrice,
+					OpenPrice:  tradeData.OpenPrice,
+					Profit:     tradeData.Profit,
 					Closed:     tradeData.Closed,
-					Comment:    &tradeData.Comment,
-					OpenTime:   nil,
-					CloseTime:  nil,
+					Comment:    tradeData.Comment,
+					OpenTime:   &openTime,
+					CloseTime:  &closeTime,
 				}
 
 				orderID := hs.OrdersByPosition[position]
