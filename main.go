@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/controller"
+	"github.com/artufi/trader/history"
 	"github.com/artufi/trader/infrastructure/database"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
@@ -19,8 +20,12 @@ func main() {
 	loader := config.DotEnvCfg{Filename: "config/.env"}
 	cfg := config.MustLoad(loader)
 
-	logFile := logging.Must(logging.GetLogFile("app.log"))
-	logger := slog.New(logging.LogHandler{Handler: slog.NewJSONHandler(logFile, nil)})
+	handlerOptions := &slog.HandlerOptions{
+		AddSource: false,
+	}
+	logger := slog.New(logging.LogHandler{
+		Handler: slog.NewJSONHandler(logging.Must(logging.GetLogFile("app.log")), handlerOptions),
+	})
 
 	db := database.MustOpen(database.OpenPool(context.Background(), cfg.Database.PostgresConfig))
 	defer db.Close()
@@ -32,14 +37,24 @@ func main() {
 	logger.Info("Connected to database", logging.URLAttr(cfg.Database.Host+":"+cfg.Database.Port))
 
 	dialer := &ws.Dialer{}
-	wsManager := websocket.NewWSManager(dialer, logger)
+	wsManager := websocket.NewWSManager(cfg, dialer, logger)
 
-	connService := websocket.ConnService{
+	connManager := websocket.ConnManager{
 		Cfg:       cfg,
 		WSManager: wsManager,
 		Logger:    logger,
 	}
-	connService.OpenConnPool(cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password, cfg.Client.Connection.Pool.Size)
+	connManager.OpenConnPool(cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password, cfg.Client.Connection.Pool.Size)
+
+	historyService := &history.HService{
+		Cfg:              cfg,
+		Logger:           logger,
+		WSManager:        wsManager,
+		Dialer:           dialer,
+		OrderService:     model.OrderService{DB: db},
+		OrdersByPosition: make(map[int]int),
+	}
+	go historyService.GetTradesStream(cfg.XTB.Demo.UserID)
 
 	purchaseC := controller.Purchase{
 		Cfg:               cfg,
