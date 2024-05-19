@@ -78,7 +78,7 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			p.Logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
 
 			// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
-			tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, 0.01)
+			tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, p.Cfg.BuySellParams.Volume)
 			if err != nil {
 				p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo", logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
@@ -203,7 +203,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 		p.Logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
 
 		// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
-		tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, 0.01)
+		tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, p.Cfg.BuySellParams.Volume)
 		if err != nil {
 			p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
 				logging.ErrorAttr(err),
