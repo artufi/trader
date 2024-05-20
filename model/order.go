@@ -84,8 +84,8 @@ func (os OrderService) UpdateClosed(orderId int, details OrderClosedDetails) (in
 	row := os.DB.QueryRow(`
 		UPDATE orders
 		SET 
-		    open_price = $3,
-		    close_price = $2,
+		    open_price = $2,
+		    close_price = $3,
 		    profit = $4, 
 		    closed = $5,
 		    comment = $6,
