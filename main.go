@@ -6,6 +6,7 @@ import (
 	"github.com/artufi/trader/controller"
 	"github.com/artufi/trader/history"
 	"github.com/artufi/trader/infrastructure/database"
+	"github.com/artufi/trader/infrastructure/database/migration"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/model"
@@ -35,6 +36,9 @@ func main() {
 		panic(err)
 	}
 	logger.Info("Connected to database", logging.URLAttr(cfg.Database.Host+":"+cfg.Database.Port))
+
+	filenames := migration.Must(migration.Up(db))
+	logger.Info("Loaded migrations", "migrations", filenames)
 
 	dialer := &ws.Dialer{}
 	wsManager := websocket.NewWSManager(cfg, dialer, logger)
