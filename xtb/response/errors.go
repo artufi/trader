@@ -9,7 +9,7 @@ type StatusError struct {
 }
 
 func (se *StatusError) Error() string {
-	return fmt.Sprintf("respone status: %t, errorCode: %s, errorDescr: %s",
+	return fmt.Sprintf("response status: %t, errorCode: %s, errorDescr: %s",
 		se.Status, se.ErrorCode, se.ErrorDescr)
 }
 
