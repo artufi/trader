@@ -4,6 +4,7 @@ CREATE TABLE orders
 (
     id                 SERIAL PRIMARY KEY,
     order_no           BIGINT NOT NULL,
+    position           BIGINT,
     user_id            INT,
     prediction_id      INT,
     symbol             TEXT,
