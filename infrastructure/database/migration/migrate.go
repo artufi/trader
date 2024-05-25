@@ -17,6 +17,8 @@ func Must(filenames []string, err error) []string {
 }
 
 func Up(db *sql.DB) ([]string, error) {
+	goose.SetBaseFS(migrations.FSMigrations)
+
 	if err := goose.SetDialect("postgres"); err != nil {
 		return nil, fmt.Errorf("goose up migration: %w", err)
 	}
