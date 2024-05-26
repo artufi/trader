@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/controller"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/model"
 	"github.com/artufi/trader/xtb/command"
 	"github.com/artufi/trader/xtb/processor"
 	"github.com/artufi/trader/xtb/response"
+	"github.com/google/uuid"
 	ws "github.com/gorilla/websocket"
 	"log/slog"
 	"sync"
@@ -31,7 +33,8 @@ type HService struct {
 	sync.Mutex
 }
 
-func (hs *HService) GetTrades(ctx context.Context, userID string) {
+// GetTradesCurrentlyUnused - currently unused, perhaps will be modified to update not updated closed trades
+func (hs *HService) GetTradesCurrentlyUnused(ctx context.Context, userID string) {
 	wsClient, err := hs.WSManager.GetUserRandomClient(userID)
 	if err != nil {
 		hs.Logger.ErrorContext(ctx, "Failed to get client to process getTrades", logging.ErrorAttr(err))
@@ -150,7 +153,9 @@ func (hs *HService) GetTradesStream(userID string) {
 			tradeData := tradeResponseStream.Data
 			position := tradeData.Position
 			if !tradeData.Closed && tradeData.Type != int(command.PENDING) {
+				hs.Lock()
 				hs.OrdersByPosition[position] = tradeData.Order2
+				hs.Unlock()
 			} else if tradeData.Closed && tradeData.Type == int(command.CLOSE) {
 				openTime := time.Unix(int64(*tradeData.OpenTime), 0)
 				closeTime := time.Unix(int64(*tradeData.CloseTime), 0)
@@ -164,6 +169,7 @@ func (hs *HService) GetTradesStream(userID string) {
 					CloseTime:  &closeTime,
 				}
 
+				hs.Lock()
 				orderID := hs.OrdersByPosition[position]
 				dbID, err := hs.OrderService.UpdateClosed(orderID, updateDetails)
 				if err != nil {
@@ -174,6 +180,134 @@ func (hs *HService) GetTradesStream(userID string) {
 
 				delete(hs.OrdersByPosition, orderID)
 				delete(hs.OrdersByPosition, position)
+				hs.Unlock()
+			}
+		}
+	}
+}
+
+func (hs *HService) CloseEligibleOrders(userID string) {
+	ctx := logging.AppendAttrsCtx(context.Background(), logging.ServiceName(serviceName))
+
+	wsClient, err := hs.WSManager.GetUserRandomClient(userID)
+	if err != nil {
+		hs.Logger.ErrorContext(ctx, "Failed to get client to process getTradeRecords", logging.ErrorAttr(err))
+		return
+	}
+
+	apiH := controller.APIHandler{
+		Proc:    processor.NewProc(wsClient),
+		TraceID: uuid.New().String(),
+	}
+
+	ordersWithPosition, err := hs.OrderService.SelectOpenOrdersWithPosition()
+	if err != nil {
+		hs.Logger.ErrorContext(ctx, "Failed to get open orders with position from database", logging.ErrorAttr(err))
+		return
+	}
+	if len(ordersWithPosition) > 0 {
+		for _, order := range ordersWithPosition {
+			symbolResponse, err := apiH.GetSymbolExtended(ctx, order.Symbol)
+			if err != nil {
+				hs.Logger.ErrorContext(ctx, "Failed to process GetSymbol",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(order.Symbol))
+				continue
+			}
+			hs.Logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
+
+			tradeTransInfo := command.TradeTransInfo{
+				CustomComment: "CLOSE TRANSACTION",
+				Expiration:    time.Now().Add(time.Minute).UnixMilli(),
+				Order:         order.Position,
+				Price:         symbolResponse.ReturnData.Ask,
+				Symbol:        order.Symbol,
+				Type:          command.CLOSE,
+				Volume:        order.Volume,
+			}
+			tradeTransResp, err := apiH.TradeTransaction(ctx, order.Symbol, tradeTransInfo)
+			if err != nil {
+				hs.Logger.ErrorContext(ctx, "Failed to process TradeTransaction",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(order.Symbol))
+				continue
+			}
+			hs.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransResp))
+
+			tradeTransStatusResp, err := apiH.TradeTransactionStatus(ctx, order.Symbol, tradeTransResp.ReturnData.Order)
+			if err != nil {
+				hs.Logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(order.Symbol))
+				continue
+			}
+			hs.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransStatusResp))
+
+			hs.Logger.InfoContext(ctx, "Close 'order' request fully processed",
+				logging.OrderAttr(order.Number),
+				logging.PositionAttr(*order.Position))
+		}
+	} else {
+		orders, err := hs.OrderService.SelectOpenOrders()
+		if err != nil {
+			hs.Logger.ErrorContext(ctx, "Failed to get open orders from database", logging.ErrorAttr(err))
+			return
+		}
+		hs.Logger.InfoContext(ctx, "Successfully processed selecting orders", logging.RespAttr(orders))
+
+		// getTrades to acquire position required to forcibly close purchase on demand in history service
+		getTradesResp, err := apiH.GetTrades(ctx, "", true)
+		if err != nil {
+			hs.Logger.WarnContext(ctx, "Failed to process GetTrades",
+				logging.ErrorAttr(err))
+		}
+		hs.Logger.InfoContext(ctx, "Successfully processed GetTrades", logging.RespAttr(getTradesResp))
+
+		for _, tradeRecord := range getTradesResp.ReturnData {
+			if !tradeRecord.Closed {
+				for _, order := range orders {
+					if tradeRecord.Order2 == order.Number {
+						symbolResponse, err := apiH.GetSymbolExtended(ctx, order.Symbol)
+						if err != nil {
+							hs.Logger.ErrorContext(ctx, "Failed to process GetSymbol",
+								logging.ErrorAttr(err),
+								logging.SymbolAttr(order.Symbol))
+							continue
+						}
+						hs.Logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
+
+						tradeTransInfo := command.TradeTransInfo{
+							CustomComment: "CLOSE TRANSACTION",
+							Expiration:    time.Now().Add(time.Minute).UnixMilli(),
+							Order:         &tradeRecord.Position,
+							Price:         symbolResponse.ReturnData.Ask,
+							Symbol:        order.Symbol,
+							Type:          command.CLOSE,
+							Volume:        order.Volume,
+						}
+						tradeTransResp, err := apiH.TradeTransaction(ctx, order.Symbol, tradeTransInfo)
+						if err != nil {
+							hs.Logger.ErrorContext(ctx, "Failed to process TradeTransaction",
+								logging.ErrorAttr(err),
+								logging.SymbolAttr(order.Symbol))
+							continue
+						}
+						hs.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransResp))
+
+						tradeTransStatusResp, err := apiH.TradeTransactionStatus(ctx, order.Symbol, tradeTransResp.ReturnData.Order)
+						if err != nil {
+							hs.Logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
+								logging.ErrorAttr(err),
+								logging.SymbolAttr(order.Symbol))
+							continue
+						}
+						hs.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransStatusResp))
+
+						hs.Logger.InfoContext(ctx, "Close 'order' request fully processed",
+							logging.OrderAttr(order.Number),
+							logging.PositionAttr(*order.Position))
+					}
+				}
 			}
 		}
 	}
