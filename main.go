@@ -60,6 +60,16 @@ func main() {
 	}
 	go historyService.GetTradesStream(cfg.XTB.Demo.UserID)
 
+	go func() {
+		ticker := time.NewTicker(time.Second * 30)
+		for {
+			select {
+			case <-ticker.C:
+				historyService.CloseEligibleOrders(cfg.XTB.Demo.UserID)
+			}
+		}
+	}()
+
 	purchaseC := controller.Purchase{
 		Cfg:               cfg,
 		WSManager:         wsManager,
