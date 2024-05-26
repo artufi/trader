@@ -60,3 +60,11 @@ func OldStreamID(oldSSID string) slog.Attr {
 func StreamID(ssid string) slog.Attr {
 	return slog.String("streamID", ssid)
 }
+
+func PositionAttr(position int) slog.Attr {
+	return slog.Int("position", position)
+}
+
+func OrderAttr(position int) slog.Attr {
+	return slog.Int("order", position)
+}
