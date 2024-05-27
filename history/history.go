@@ -232,8 +232,8 @@ func (hs *HService) CloseEligibleOrders(userID string) {
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(order.Symbol))
 
-				statusError := response.StatusError{}
-				if errors.As(err, statusError) && statusError.ErrorCode == "SE199" {
+				var statusError *response.StatusError
+				if errors.As(err, &statusError) && statusError.ErrorCode == "SE199" {
 					hs.Logger.ErrorContext(ctx, "Probably Order is already closed but status is not refreshed in a database",
 						logging.OrderAttr(order.Number),
 						logging.PositionAttr(*order.Position))
@@ -279,6 +279,7 @@ func (hs *HService) CloseEligibleOrders(userID string) {
 			hs.Logger.InfoContext(ctx, "Successfully processed GetTrades", logging.RespAttr(getTradesResp))
 		}
 
+		// TODO would be good to update an order with a position number
 		for _, tradeRecord := range getTradesResp.ReturnData {
 			if !tradeRecord.Closed {
 				for _, order := range orders {
@@ -307,8 +308,8 @@ func (hs *HService) CloseEligibleOrders(userID string) {
 								logging.ErrorAttr(err),
 								logging.SymbolAttr(order.Symbol))
 
-							statusError := response.StatusError{}
-							if errors.As(err, statusError) && statusError.ErrorCode == "SE199" {
+							var statusError *response.StatusError
+							if errors.As(err, &statusError) && statusError.ErrorCode == "SE199" {
 								hs.Logger.ErrorContext(ctx, "Probably Order is already closed but status is not refreshed in a database",
 									logging.OrderAttr(order.Number),
 									logging.PositionAttr(*order.Position))
