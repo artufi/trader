@@ -11,6 +11,7 @@ import (
 	"github.com/artufi/trader/xtb/command"
 	"github.com/artufi/trader/xtb/processor"
 	"github.com/artufi/trader/xtb/response"
+	"github.com/go-faster/errors"
 	"github.com/google/uuid"
 	ws "github.com/gorilla/websocket"
 	"log/slog"
@@ -157,8 +158,8 @@ func (hs *HService) GetTradesStream(userID string) {
 				hs.OrdersByPosition[position] = tradeData.Order2
 				hs.Unlock()
 			} else if tradeData.Closed && tradeData.Type == int(command.CLOSE) {
-				openTime := time.Unix(int64(*tradeData.OpenTime), 0)
-				closeTime := time.Unix(int64(*tradeData.CloseTime), 0)
+				openTime := time.UnixMilli(int64(*tradeData.OpenTime))
+				closeTime := time.UnixMilli(int64(*tradeData.CloseTime))
 				updateDetails := model.OrderClosedDetails{
 					ClosePrice: tradeData.ClosePrice,
 					OpenPrice:  tradeData.OpenPrice,
@@ -230,9 +231,23 @@ func (hs *HService) CloseEligibleOrders(userID string) {
 				hs.Logger.ErrorContext(ctx, "Failed to process TradeTransaction",
 					logging.ErrorAttr(err),
 					logging.SymbolAttr(order.Symbol))
+
+				statusError := response.StatusError{}
+				if errors.As(err, statusError) && statusError.ErrorCode == "SE199" {
+					hs.Logger.ErrorContext(ctx, "Probably Order is already closed but status is not refreshed in a database",
+						logging.OrderAttr(order.Number),
+						logging.PositionAttr(*order.Position))
+
+					id, err := hs.OrderService.MarkFailedAsClosed(order.Number)
+					if err != nil {
+						hs.Logger.ErrorContext(ctx, "Failed to update failed order", logging.ErrorAttr(err))
+					} else {
+						hs.Logger.InfoContext(ctx, "Updated order", logging.IDAttr(id))
+					}
+				}
 				continue
 			}
-			hs.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransResp))
+			hs.Logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeTransResp))
 
 			tradeTransStatusResp, err := apiH.TradeTransactionStatus(ctx, order.Symbol, tradeTransResp.ReturnData.Order)
 			if err != nil {
@@ -260,8 +275,9 @@ func (hs *HService) CloseEligibleOrders(userID string) {
 		if err != nil {
 			hs.Logger.WarnContext(ctx, "Failed to process GetTrades",
 				logging.ErrorAttr(err))
+		} else {
+			hs.Logger.InfoContext(ctx, "Successfully processed GetTrades", logging.RespAttr(getTradesResp))
 		}
-		hs.Logger.InfoContext(ctx, "Successfully processed GetTrades", logging.RespAttr(getTradesResp))
 
 		for _, tradeRecord := range getTradesResp.ReturnData {
 			if !tradeRecord.Closed {
@@ -290,9 +306,23 @@ func (hs *HService) CloseEligibleOrders(userID string) {
 							hs.Logger.ErrorContext(ctx, "Failed to process TradeTransaction",
 								logging.ErrorAttr(err),
 								logging.SymbolAttr(order.Symbol))
+
+							statusError := response.StatusError{}
+							if errors.As(err, statusError) && statusError.ErrorCode == "SE199" {
+								hs.Logger.ErrorContext(ctx, "Probably Order is already closed but status is not refreshed in a database",
+									logging.OrderAttr(order.Number),
+									logging.PositionAttr(*order.Position))
+
+								id, err := hs.OrderService.MarkFailedAsClosed(order.Number)
+								if err != nil {
+									hs.Logger.ErrorContext(ctx, "Failed to update failed order", logging.ErrorAttr(err))
+								} else {
+									hs.Logger.InfoContext(ctx, "Updated order", logging.IDAttr(id))
+								}
+							}
 							continue
 						}
-						hs.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransResp))
+						hs.Logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeTransResp))
 
 						tradeTransStatusResp, err := apiH.TradeTransactionStatus(ctx, order.Symbol, tradeTransResp.ReturnData.Order)
 						if err != nil {
