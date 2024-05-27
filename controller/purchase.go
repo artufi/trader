@@ -3,7 +3,6 @@ package controller
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
@@ -80,7 +79,8 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
 			tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, p.Cfg.BuySellParams.Volume)
 			if err != nil {
-				p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo", logging.ErrorAttr(err),
+				p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
+					logging.ErrorAttr(err),
 					logging.SymbolAttr(symbol))
 				continue
 			}
@@ -127,8 +127,9 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 					p.Logger.WarnContext(ctx, "Failed to process GetTrades, position number will not be added",
 						logging.ErrorAttr(err),
 						logging.SymbolAttr(symbol))
+				} else {
+					p.Logger.InfoContext(ctx, "Successfully processed GetTrades", logging.RespAttr(getTradesResp))
 				}
-				p.Logger.InfoContext(ctx, "Successfully processed GetTrades", logging.RespAttr(getTradesResp))
 
 				var position int
 				for _, tradeRecord := range getTradesResp.ReturnData {
@@ -192,14 +193,22 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 			http.Error(w, "No clients assigned to specified user", http.StatusInternalServerError)
 			return
 		}
-		ctx = logging.AppendAttrsCtx(ctx, logging.ConnNo(wsClient.ConnID))
+		ctx = logging.AppendAttrsCtx(ctx, logging.ConnNo(wsClient.ConnID), logging.StreamID(wsClient.StreamSessionID))
 
-		h := APIHandler{
+		// init api handler
+		apiH := APIHandler{
 			Proc:    processor.NewProc(wsClient),
 			TraceID: traceID,
 		}
 
-		// get predictions
+		dbH := DBHandler{
+			TraceID:           traceID,
+			Logger:            p.Logger,
+			PredictionService: p.PredictionService,
+			OrderService:      p.OrderService,
+		}
+
+		// get prediction detail
 		var predictionDetails model.PredictionDetails
 		err = json.NewDecoder(r.Body).Decode(&predictionDetails)
 		if err != nil {
@@ -213,7 +222,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 		symbol := predictionDetails.Symbol
 
 		// get symbol details
-		symbolResponse, err := h.GetSymbolExtended(ctx, symbol)
+		symbolResponse, err := apiH.GetSymbolExtended(ctx, symbol)
 		if err != nil {
 			p.Logger.ErrorContext(ctx, "Failed to process GetSymbol",
 				logging.ErrorAttr(err),
@@ -229,12 +238,12 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 			p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
 				logging.ErrorAttr(err),
 				logging.SymbolAttr(symbol))
-			http.Error(w, fmt.Sprintf("Failed to prepare TradeTransInfo: %v", err), http.StatusBadRequest)
+			http.Error(w, "Failed to prepare TradeTransInfo", http.StatusInternalServerError)
 			return
 		}
 
 		// process TradeTransaction
-		tradeResponse, err := h.TradeTransaction(ctx, symbol, tradeTransInfo)
+		tradeTransResp, err := apiH.TradeTransaction(ctx, symbol, tradeTransInfo)
 		if err != nil {
 			p.Logger.ErrorContext(ctx, "Failed to process TradeTransaction",
 				logging.ErrorAttr(err),
@@ -242,10 +251,10 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 			http.Error(w, "Failed to execute TradeTransaction", http.StatusInternalServerError)
 			return
 		}
-		p.Logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeResponse))
+		p.Logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeTransResp))
 
 		// process TradeTransactionStatus
-		tradeResponseStatus, err := h.TradeTransactionStatus(ctx, symbol, tradeResponse.ReturnData.Order)
+		tradeTransStatusResp, err := apiH.TradeTransactionStatus(ctx, symbol, tradeTransResp.ReturnData.Order)
 		if err != nil {
 			p.Logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
 				logging.ErrorAttr(err),
@@ -253,8 +262,79 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 			http.Error(w, "Failed to execute TradeTransactionStatus", http.StatusInternalServerError)
 			return
 		}
-		p.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
+		p.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransStatusResp))
 
-		p.Logger.Info("Purchase request fully processed")
+		prediction := model.Prediction{
+			UserID:            1,
+			PredictionDetails: predictionDetails,
+		}
+		predID, err := dbH.InsertPrediction(ctx, prediction)
+		if err != nil {
+			p.Logger.ErrorContext(ctx, "Failed to insert prediction",
+				logging.ErrorAttr(err),
+				logging.SymbolAttr(symbol))
+			http.Error(w, "Failed to insert prediction", http.StatusInternalServerError)
+			return
+		}
+		p.Logger.InfoContext(ctx, "Inserted prediction", logging.IDAttr(predID))
+
+		var order model.Order
+		reqStatus, errReq := tradeTransStatusResp.CheckRequestStatus()
+		if reqStatus != response.REJECTED {
+			// getTrades to acquire position required to forcibly close purchase on demand in history service
+			getTradesResp, err := apiH.GetTrades(ctx, symbol, true)
+			if err != nil {
+				p.Logger.WarnContext(ctx, "Failed to process GetTrades, position number will not be added",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+			} else {
+				p.Logger.InfoContext(ctx, "Successfully processed GetTrades", logging.RespAttr(getTradesResp))
+			}
+
+			var position int
+			for _, tradeRecord := range getTradesResp.ReturnData {
+				if tradeTransResp.ReturnData.Order == tradeRecord.Order2 {
+					position = tradeRecord.Position
+					p.Logger.InfoContext(ctx, "Acquired order position", logging.PositionAttr(position))
+					break
+				}
+			}
+
+			order = model.Order{
+				Number:         tradeTransResp.ReturnData.Order,
+				UserID:         1,
+				Position:       &position,
+				PredictionID:   predID,
+				RequestStatus:  response.RequestStatusName[reqStatus],
+				Message:        tradeTransStatusResp.ReturnData.Message,
+				TradeTransInfo: tradeTransInfo,
+			}
+		} else {
+			rsErr := &response.RequestStatusError{}
+			if errors.As(errReq, &rsErr) {
+				order = model.Order{
+					Number:         tradeTransResp.ReturnData.Order,
+					UserID:         1,
+					PredictionID:   predID,
+					RequestStatus:  rsErr.RequestStatus,
+					Message:        rsErr.Message,
+					TradeTransInfo: tradeTransInfo,
+					OrderClosedDetails: model.OrderClosedDetails{
+						Closed: true,
+					},
+				}
+			}
+		}
+		ordID, err := dbH.InsertOrder(ctx, order)
+		if err != nil {
+			p.Logger.ErrorContext(ctx, "Failed to insert order",
+				logging.ErrorAttr(err),
+				logging.SymbolAttr(symbol))
+			http.Error(w, "Failed to insert order", http.StatusInternalServerError)
+			return
+		}
+		p.Logger.InfoContext(ctx, "Inserted order", logging.IDAttr(ordID))
+
+		p.Logger.InfoContext(ctx, "Purchases request fully processed")
 	}
 }
