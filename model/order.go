@@ -153,7 +153,7 @@ type OrderClosedDetails struct {
 	CloseTime  *time.Time
 }
 
-func (os OrderService) UpdateClosed(orderId int, details OrderClosedDetails) (int, error) {
+func (os OrderService) UpdateClosed(orderID int, details OrderClosedDetails) (int, error) {
 	row := os.DB.QueryRow(`
 		UPDATE orders
 		SET 
@@ -165,13 +165,29 @@ func (os OrderService) UpdateClosed(orderId int, details OrderClosedDetails) (in
 		    open_time = $7,
 		    close_time = $8
 		WHERE order_no = $1
-		RETURNING id`, orderId, details.OpenPrice, details.ClosePrice, details.Profit, details.Closed,
+		RETURNING id`, orderID, details.OpenPrice, details.ClosePrice, details.Profit, details.Closed,
 		details.Comment, details.OpenTime, details.CloseTime)
 
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
 		return id, fmt.Errorf("update order: %w", err)
+	}
+	return id, nil
+}
+
+func (os OrderService) MarkFailedAsClosed(orderID int) (int, error) {
+	row := os.DB.QueryRow(`
+		UPDATE orders
+		SET 
+		    closed = true
+		WHERE order_no = $1
+		RETURNING id`, orderID)
+
+	var id int
+	err := row.Scan(&id)
+	if err != nil {
+		return id, fmt.Errorf("mark order: %w", err)
 	}
 	return id, nil
 }
