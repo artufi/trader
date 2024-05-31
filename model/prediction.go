@@ -32,11 +32,12 @@ func (ps PredictionService) Insert(p Prediction) (int, error) {
 			 run_timestamp,
 			 sl_tp_logic,
 			 id_model_properties,
+			 interval,
 			 created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id`, p.UserID, p.Symbol, p.PredictionDate, p.Allocation, p.PredsProba, p.StopLoss, p.TakeProfit,
 		p.ModelSetup.ForecastHorizon, p.ModelSetup.TargetChange, p.ModelSetup.ModelType, p.RunTimestamp,
-		p.SlTpLogic, p.IdModelProperties, time.Now())
+		p.SlTpLogic, p.IdModelProperties, p.Interval, time.Now())
 
 	err := row.Scan(&p.ID)
 	if err != nil {

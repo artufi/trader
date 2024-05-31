@@ -102,3 +102,18 @@ func (h APIHandler) Logout(ctx context.Context) (response.General, error) {
 
 	return resp, nil
 }
+
+func (h APIHandler) GetTrades(ctx context.Context, symbol string, onlyOpened bool) (response.GetTrades, error) {
+	proc := "getTrades"
+	customTag := h.TraceID + proc + symbol
+
+	resp, err := h.Proc.GetTrades(ctx, customTag, onlyOpened)
+	if err != nil {
+		return resp, fmt.Errorf("%s: %w", proc, err)
+	}
+	if err = h.ValidateResp(resp, customTag); err != nil {
+		return resp, fmt.Errorf("%s: %w", proc, err)
+	}
+
+	return resp, nil
+}

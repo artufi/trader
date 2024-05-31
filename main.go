@@ -6,6 +6,7 @@ import (
 	"github.com/artufi/trader/controller"
 	"github.com/artufi/trader/history"
 	"github.com/artufi/trader/infrastructure/database"
+	"github.com/artufi/trader/infrastructure/database/migration"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/model"
@@ -36,6 +37,9 @@ func main() {
 	}
 	logger.Info("Connected to database", logging.URLAttr(cfg.Database.Host+":"+cfg.Database.Port))
 
+	filenames := migration.Must(migration.Up(db))
+	logger.Info("Loaded migrations", "migrations", filenames)
+
 	dialer := &ws.Dialer{}
 	wsManager := websocket.NewWSManager(cfg, dialer, logger)
 
@@ -55,6 +59,16 @@ func main() {
 		OrdersByPosition: make(map[int]int),
 	}
 	go historyService.GetTradesStream(cfg.XTB.Demo.UserID)
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 30)
+		for {
+			select {
+			case <-ticker.C:
+				historyService.CloseEligibleOrders(cfg.XTB.Demo.UserID)
+			}
+		}
+	}()
 
 	purchaseC := controller.Purchase{
 		Cfg:               cfg,

@@ -1,6 +1,6 @@
 package response
 
-type GetTrade struct {
+type GetTrades struct {
 	Status     bool          `json:"status"`
 	ReturnData []TradeRecord `json:"returnData"`
 	ErrorCode  string        `json:"errorCode,omitempty"`
@@ -35,6 +35,27 @@ type TradeRecord struct {
 	Timestamp        int      `json:"timestamp"`
 	Tp               float64  `json:"tp"`
 	Volume           float64  `json:"volume"`
+}
+
+func (gt GetTrades) CheckStatus() error {
+	if !gt.Status {
+		return &StatusError{
+			Status:     false,
+			ErrorCode:  gt.ErrorCode,
+			ErrorDescr: gt.ErrorDescr,
+		}
+	}
+	return nil
+}
+
+func (gt GetTrades) CheckCustomTag(customTag string) error {
+	if gt.CustomTag != customTag {
+		return &CustomTagError{
+			Returned: gt.CustomTag,
+			Provided: customTag,
+		}
+	}
+	return nil
 }
 
 type GetTradeStream struct {

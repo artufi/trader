@@ -16,6 +16,7 @@ CREATE TABLE predictions
     run_timestamp       TEXT,
     sl_tp_logic         TEXT,
     id_model_properties TEXT,
+    interval            TEXT,
     created_at          TIMESTAMPTZ,
     CONSTRAINT fk_predictions_user FOREIGN KEY (user_id) REFERENCES users (id)
 );

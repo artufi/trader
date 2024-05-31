@@ -7,17 +7,19 @@ import (
 )
 
 const (
-	getTradesProc       = "getTrades"
-	getTradesStreamProc = "getTradesStream"
+	getTradesProc        = "getTrades"
+	getTradesStreamProc  = "getTradesStream"
+	getTradesHistoryProc = "getTradesHistory"
+	getTradeRecordsProc  = "getTradeRecords"
 )
 
-func (p Proc) GetTrades(ctx context.Context, customTag string, onlyOpened bool) (response.GetTrade, error) {
+func (p Proc) GetTrades(ctx context.Context, customTag string, onlyOpened bool) (response.GetTrades, error) {
 	getTradesJSON, err := jsonform.GetTrades(customTag, onlyOpened)
 	if err != nil {
-		return response.GetTrade{}, &ProcError{Processor: getTradesProc, Err: err}
+		return response.GetTrades{}, &ProcError{Processor: getTradesProc, Err: err}
 	}
 
-	return process[response.GetTrade](ctx, p.client, customTag, getTradesJSON, getTradesProc)
+	return process[response.GetTrades](ctx, p.client, customTag, getTradesJSON, getTradesProc)
 }
 
 func (p Proc) GetTradesStream(ctx context.Context, sessionID string) ([]byte, error) {
@@ -27,4 +29,22 @@ func (p Proc) GetTradesStream(ctx context.Context, sessionID string) ([]byte, er
 	}
 
 	return processStream(ctx, p.client, "", getTradesJSON, getTradesStreamProc)
+}
+
+func (p Proc) GetTradesHistory(ctx context.Context, customTag string, start, end int) (response.GetTrades, error) {
+	getTradesHistory, err := jsonform.GetTradesHistory(customTag, start, end)
+	if err != nil {
+		return response.GetTrades{}, &ProcError{Processor: getTradesHistoryProc, Err: err}
+	}
+
+	return process[response.GetTrades](ctx, p.client, customTag, getTradesHistory, getTradesHistoryProc)
+}
+
+func (p Proc) GetTradeRecords(ctx context.Context, customTag string, orders []int) (response.GetTrades, error) {
+	getTradeRecordsJSON, err := jsonform.GetTradeRecords(customTag, orders)
+	if err != nil {
+		return response.GetTrades{}, &ProcError{Processor: getTradeRecordsProc, Err: err}
+	}
+
+	return process[response.GetTrades](ctx, p.client, customTag, getTradeRecordsJSON, getTradeRecordsProc)
 }

@@ -31,7 +31,8 @@ type HService struct {
 	sync.Mutex
 }
 
-func (hs *HService) GetTrades(ctx context.Context, userID string) {
+// GetTradesCurrentlyUnused - currently unused, perhaps will be modified to update not updated closed trades
+func (hs *HService) GetTradesCurrentlyUnused(ctx context.Context, userID string) {
 	wsClient, err := hs.WSManager.GetUserRandomClient(userID)
 	if err != nil {
 		hs.Logger.ErrorContext(ctx, "Failed to get client to process getTrades", logging.ErrorAttr(err))
@@ -150,10 +151,12 @@ func (hs *HService) GetTradesStream(userID string) {
 			tradeData := tradeResponseStream.Data
 			position := tradeData.Position
 			if !tradeData.Closed && tradeData.Type != int(command.PENDING) {
+				hs.Lock()
 				hs.OrdersByPosition[position] = tradeData.Order2
+				hs.Unlock()
 			} else if tradeData.Closed && tradeData.Type == int(command.CLOSE) {
-				openTime := time.Unix(int64(*tradeData.OpenTime), 0)
-				closeTime := time.Unix(int64(*tradeData.CloseTime), 0)
+				openTime := time.UnixMilli(int64(*tradeData.OpenTime))
+				closeTime := time.UnixMilli(int64(*tradeData.CloseTime))
 				updateDetails := model.OrderClosedDetails{
 					ClosePrice: tradeData.ClosePrice,
 					OpenPrice:  tradeData.OpenPrice,
@@ -164,6 +167,7 @@ func (hs *HService) GetTradesStream(userID string) {
 					CloseTime:  &closeTime,
 				}
 
+				hs.Lock()
 				orderID := hs.OrdersByPosition[position]
 				dbID, err := hs.OrderService.UpdateClosed(orderID, updateDetails)
 				if err != nil {
@@ -174,6 +178,7 @@ func (hs *HService) GetTradesStream(userID string) {
 
 				delete(hs.OrdersByPosition, orderID)
 				delete(hs.OrdersByPosition, position)
+				hs.Unlock()
 			}
 		}
 	}

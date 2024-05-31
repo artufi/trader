@@ -22,6 +22,7 @@ type PredictionDetails struct {
 	} `json:"model_setup"`
 	RunTimestamp      string `json:"runtimestamp"`
 	SlTpLogic         string `json:"sl_tp_logic"`
+	Interval          string `json:"interval"`
 	IdModelProperties string `json:"id_model_properties"`
 }
 

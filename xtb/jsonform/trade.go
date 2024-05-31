@@ -7,7 +7,9 @@ import (
 )
 
 const (
-	getTrades = "getTrades"
+	getTrades        = "getTrades"
+	getTradesHistory = "getTradesHistory"
+	getTradeRecords  = "getTradeRecords"
 )
 
 func GetTrades(customTag string, openedOnly bool) ([]byte, error) {
@@ -33,4 +35,31 @@ func GetTradesStream(ssid string) ([]byte, error) {
 		return nil, fmt.Errorf("serialize %s command: %w", getTrades+"Stream", err)
 	}
 	return gtJSON, nil
+}
+
+func GetTradesHistory(customTag string, start, end int) ([]byte, error) {
+	gth := command.GetTradesHistory{
+		Command:   getTradesHistory,
+		CustomTag: customTag,
+	}
+	gth.Arguments.Start = start
+	gth.Arguments.End = end
+	gthJSON, err := json.Marshal(gth)
+	if err != nil {
+		return nil, fmt.Errorf("serialize %s command: %w", getTradesHistory, err)
+	}
+	return gthJSON, nil
+}
+
+func GetTradeRecords(customTag string, orders []int) ([]byte, error) {
+	gtr := command.GetTradeRecords{
+		Command:   getTradeRecords,
+		CustomTag: customTag,
+	}
+	gtr.Arguments.Orders = orders
+	gtrJSON, err := json.Marshal(gtr)
+	if err != nil {
+		return nil, fmt.Errorf("serialize %s command: %w", getTradeRecords, err)
+	}
+	return gtrJSON, nil
 }
