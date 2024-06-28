@@ -39,7 +39,7 @@ type TradeTransactionStatus struct {
 		Ask           float64       `json:"ask"`
 		Bid           float64       `json:"bid"`
 		CustomComment string        `json:"customComment"`
-		Message       string        `json:"message"`
+		Message       *string       `json:"message"`
 		Order         int           `json:"order"` // not sure maybe float64
 		RequestStatus RequestStatus `json:"requestStatus"`
 	} `json:"returnData"`
@@ -90,12 +90,12 @@ func (tts TradeTransactionStatus) CheckRequestStatus() (RequestStatus, error) {
 	case ERROR:
 		return ERROR, &RequestStatusError{
 			RequestStatus: RequestStatusName[tts.ReturnData.RequestStatus],
-			Message:       tts.ReturnData.Message,
+			Message:       *tts.ReturnData.Message,
 		}
 	case REJECTED:
 		return REJECTED, &RequestStatusError{
 			RequestStatus: RequestStatusName[tts.ReturnData.RequestStatus],
-			Message:       tts.ReturnData.Message,
+			Message:       *tts.ReturnData.Message,
 		}
 	case ACCEPTED:
 		return ACCEPTED, nil
@@ -104,7 +104,7 @@ func (tts TradeTransactionStatus) CheckRequestStatus() (RequestStatus, error) {
 	default:
 		return tts.ReturnData.RequestStatus, &RequestStatusError{
 			RequestStatus: "UNKNOWN",
-			Message:       tts.ReturnData.Message,
+			Message:       *tts.ReturnData.Message,
 		}
 	}
 }

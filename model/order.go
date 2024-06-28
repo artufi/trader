@@ -20,7 +20,7 @@ type Order struct {
 
 	// from TradeTransactionStatus
 	RequestStatus string
-	Message       string
+	Message       *string
 
 	command.TradeTransInfo
 
@@ -48,7 +48,7 @@ func (os OrderService) SelectOpenOrdersWithPosition() ([]Order, error) {
                   	AND o.closed = false
                   	AND (now() - p.interval::INTERVAL) > (o.created_at AT TIME ZONE 'Universal')`)
 	if err != nil {
-		return nil, fmt.Errorf("select open positions: %w", err)
+		return nil, fmt.Errorf("select open orders with positions: %w", err)
 	}
 	defer rows.Close()
 
@@ -57,7 +57,7 @@ func (os OrderService) SelectOpenOrdersWithPosition() ([]Order, error) {
 		order := Order{}
 		err = rows.Scan(&order.Number, &order.Position, &order.Symbol, &order.Volume, &order.Closed)
 		if err != nil {
-			return nil, fmt.Errorf("select open positions: %w", err)
+			return nil, fmt.Errorf("select open orders with positions: %w", err)
 		}
 		orders = append(orders, order)
 	}
@@ -95,6 +95,41 @@ func (os OrderService) SelectOpenOrders() ([]Order, error) {
 		if order.Number != 0 {
 			orders = append(orders, order)
 		}
+	}
+	//err = rows.Err()
+
+	return orders, nil
+}
+
+func (os OrderService) SelectClosedOrdersById(orderID int) ([]Order, error) {
+	rows, err := os.DB.Query(`
+				SELECT 
+				    o.order_no,
+				    o.position,
+				    o.symbol,
+				    o.volume,
+				    o.closed
+				FROM orders o
+				JOIN predictions p ON o.prediction_id = p.id
+                WHERE
+                    o.order_no = $1
+                  	AND o.closed = true
+                  	AND o.close_time IS NULL
+                  	AND o.close_price IS NULL
+                  	AND o.tts_message IS NULL`, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("select closed orders by id: %w", err)
+	}
+	defer rows.Close()
+
+	orders := make([]Order, 0, 0)
+	for rows.Next() {
+		order := Order{}
+		err = rows.Scan(&order.Number, &order.Position, &order.Symbol, &order.Volume, &order.Closed)
+		if err != nil {
+			return nil, fmt.Errorf("select closed orders by id: %w", err)
+		}
+		orders = append(orders, order)
 	}
 	//err = rows.Err()
 
@@ -171,7 +206,7 @@ func (os OrderService) UpdateClosed(orderID int, details OrderClosedDetails) (in
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
-		return id, fmt.Errorf("update order: %w", err)
+		return id, fmt.Errorf("update closed order: %w", err)
 	}
 	return id, nil
 }
