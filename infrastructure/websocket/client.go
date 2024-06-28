@@ -403,19 +403,19 @@ func (wsc *WSClientStream) WriteText(ctx context.Context, messageID string, data
 	}
 }
 
-func (wsc *WSClientStream) Ping(ctx context.Context, interval time.Duration, ssid string) {
+func (wsc *WSClientStream) Ping(ctx context.Context, interval time.Duration) {
 	if interval < 1 {
-		wsc.logger.WarnContext(ctx, "Too low ping interval value", "value", interval)
+		wsc.logger.WarnContext(ctx, "Client-stream too low ping interval value", "value", interval)
 		return
 	}
 	ticker := time.NewTicker(time.Second * interval)
 	for {
 		select {
 		case <-ticker.C:
-			wsc.logger.InfoContext(ctx, "Ping stream")
-			pingStreamJSON, err := jsonform.PingStream(ssid)
+			wsc.logger.InfoContext(ctx, "Client-stream Ping")
+			pingStreamJSON, err := jsonform.PingStream(wsc.StreamSessionID)
 			if err != nil {
-				wsc.logger.ErrorContext(ctx, "Failed to serialize pingStream", logging.ErrorAttr(err))
+				wsc.logger.ErrorContext(ctx, "Client-stream failed to serialize pingStream", logging.ErrorAttr(err))
 				return
 			}
 			wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
