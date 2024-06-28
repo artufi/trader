@@ -138,6 +138,21 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 
 				var position int
 				for _, tradeRecord := range getTradesResp.ReturnData {
+					// Each transaction in the XTB system is assigned a unique order number. When a TradeTransaction
+					// is executed by the client, the system returns an order number for that transaction.
+					// Subsequently, request made by the client is processed by the system, which marks the start
+					// of a new transaction in their system. As a result, the previous order number is transformed
+					// into 'order2', indicating that the previous system transaction has simply ended,
+					// and a new transaction with a different order number is being processed. When the previous
+					// order number matches the 'order2' number retrieved from XTB, it indicates that transactions
+					// in their system are connected, and it is possible to obtain a position number that represents
+					// the entire sequence of transactions.
+					//
+					// This process resembles a chain of transactions: a TradeTransaction from the client assigns
+					// an order number to that transaction, then the system processes the TradeTransaction,
+					// assigns it a new order number, and saves the previous order number of transaction in the
+					// 'order2' field. Finally, it returns the position number that represents the complete
+					// chain of transactions in the system.
 					if tradeTransResp.ReturnData.Order == tradeRecord.Order2 {
 						position = tradeRecord.Position
 						p.Logger.InfoContext(ctx, "Acquired order position", logging.PositionAttr(position))
@@ -302,6 +317,21 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 
 			var position int
 			for _, tradeRecord := range getTradesResp.ReturnData {
+				// Each transaction in the XTB system is assigned a unique order number. When a TradeTransaction
+				// is executed by the client, the system returns an order number for that transaction.
+				// Subsequently, request made by the client is processed by the system, which marks the start
+				// of a new transaction in their system. As a result, the previous order number is transformed
+				// into 'order2', indicating that the previous system transaction has simply ended,
+				// and a new transaction with a different order number is being processed. When the previous
+				// order number matches the 'order2' number retrieved from XTB, it indicates that transactions
+				// in their system are connected, and it is possible to obtain a position number that represents
+				// the entire sequence of transactions.
+				//
+				// This process resembles a chain of transactions: a TradeTransaction from the client assigns
+				// an order number to that transaction, then the system processes the TradeTransaction,
+				// assigns it a new order number, and saves the previous order number of transaction in the
+				// 'order2' field. Finally, it returns the position number that represents the complete
+				// chain of transactions in the system.
 				if tradeTransResp.ReturnData.Order == tradeRecord.Order2 {
 					position = tradeRecord.Position
 					p.Logger.InfoContext(ctx, "Acquired order position", logging.PositionAttr(position))
