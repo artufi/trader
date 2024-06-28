@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"github.com/artufi/trader/xtb/command"
 	"github.com/artufi/trader/xtb/response"
@@ -32,6 +33,8 @@ const (
 	NoAction = "NoAction"
 )
 
+var ErrNoAction = errors.New("prepare TradeTransInfo: no action")
+
 func (pd PredictionDetails) PrepareTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// TODO what if 0?
 	switch pd.ModelSetup.ModelType {
@@ -44,7 +47,7 @@ func (pd PredictionDetails) PrepareTradeTransInfo(symbolData response.GetSymbolE
 			return pd.prepareSELLTradeTransInfo(symbolData, volumeToBuy)
 		}
 	case NoAction:
-		return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: %q", NoAction)
+		return command.TradeTransInfo{}, ErrNoAction
 	}
 	return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: Unknown ModelType: %q", pd.ModelSetup.ModelType)
 }

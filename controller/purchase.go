@@ -79,9 +79,14 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 			// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
 			tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, p.Cfg.BuySellParams.Volume)
 			if err != nil {
-				p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
-					logging.ErrorAttr(err),
-					logging.SymbolAttr(symbol))
+				if errors.Is(err, model.ErrNoAction) {
+					p.Logger.InfoContext(ctx, "ModelType: NoAction - stop processing",
+						logging.SymbolAttr(symbol))
+				} else {
+					p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
+						logging.ErrorAttr(err),
+						logging.SymbolAttr(symbol))
+				}
 				continue
 			}
 
@@ -157,7 +162,7 @@ func (p *Purchase) PurchasesHandler() http.HandlerFunc {
 						UserID:         1,
 						PredictionID:   predID,
 						RequestStatus:  rsErr.RequestStatus,
-						Message:        rsErr.Message,
+						Message:        &rsErr.Message,
 						TradeTransInfo: tradeTransInfo,
 						OrderClosedDetails: model.OrderClosedDetails{
 							Closed: true,
@@ -235,10 +240,14 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 		// prepare TradeTransactionInfo to pass it to TradeTransaction as argument
 		tradeTransInfo, err := predictionDetails.PrepareTradeTransInfo(symbolResponse, p.Cfg.BuySellParams.Volume)
 		if err != nil {
-			p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
-				logging.ErrorAttr(err),
-				logging.SymbolAttr(symbol))
-			http.Error(w, "Failed to prepare TradeTransInfo", http.StatusInternalServerError)
+			if errors.Is(err, model.ErrNoAction) {
+				p.Logger.InfoContext(ctx, "ModelType: NoAction - stop processing",
+					logging.SymbolAttr(symbol))
+			} else {
+				p.Logger.WarnContext(ctx, "Failed to prepare TradeTransInfo",
+					logging.ErrorAttr(err),
+					logging.SymbolAttr(symbol))
+			}
 			return
 		}
 
@@ -317,7 +326,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 					UserID:         1,
 					PredictionID:   predID,
 					RequestStatus:  rsErr.RequestStatus,
-					Message:        rsErr.Message,
+					Message:        &rsErr.Message,
 					TradeTransInfo: tradeTransInfo,
 					OrderClosedDetails: model.OrderClosedDetails{
 						Closed: true,
