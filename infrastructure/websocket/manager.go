@@ -120,7 +120,10 @@ func (wsm *WSManager) DialForNewStreamClient(ctx context.Context, url string, re
 
 	ctx = logging.AppendAttrsCtx(ctx, logging.StreamID(ssid))
 	go client.ReadMessages(ctx)
-	go client.Ping(ctx, time.Duration(wsm.cfg.Client.Stream.Ping.IntervalSec), ssid)
+	// SSID is known at this point, so it is better to ping immediately after creating client.
+	// This is different situation than normal WSClient where connections are managed by ConnManager
+	// and SSID is not known before log into XTB
+	go client.Ping(ctx, time.Duration(wsm.cfg.Client.Stream.Ping.IntervalSec))
 
 	return client, nil
 }
