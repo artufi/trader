@@ -39,6 +39,8 @@ func (hs *HService) GetTradesCurrentlyUnused(ctx context.Context, userID string)
 		return
 	}
 
+	// search for specific orders where closed is true, close_time is null i tts_message jest puste lub null?
+
 	proc := processor.NewProc(wsClient)
 	getTradesResp, err := proc.GetTrades(ctx, "getTrades"+wsClient.StreamSessionID, false)
 	if err != nil {
@@ -153,6 +155,15 @@ func (hs *HService) GetTradesStream(userID string) {
 			if !tradeData.Closed && tradeData.Type != int(command.PENDING) {
 				hs.Lock()
 				hs.OrdersByPosition[position] = tradeData.Order2
+
+				dbID, err := hs.OrderService.UpdateOpened(tradeData.Order2, *tradeData.OpenPrice,
+					time.UnixMilli(int64(*tradeData.OpenTime)))
+				if err != nil {
+					hs.Logger.ErrorContext(ctx, "getTradesStream failed to update opened order",
+						logging.ErrorAttr(err))
+				} else {
+					hs.Logger.InfoContext(ctx, "getTradesStream updated opened order", logging.IDAttr(dbID))
+				}
 				hs.Unlock()
 			} else if tradeData.Closed && tradeData.Type == int(command.CLOSE) {
 				openTime := time.UnixMilli(int64(*tradeData.OpenTime))
@@ -171,9 +182,9 @@ func (hs *HService) GetTradesStream(userID string) {
 				orderID := hs.OrdersByPosition[position]
 				dbID, err := hs.OrderService.UpdateClosed(orderID, updateDetails)
 				if err != nil {
-					hs.Logger.ErrorContext(ctx, "Failed to update closed order stream", logging.ErrorAttr(err))
+					hs.Logger.ErrorContext(ctx, "getTradesStream failed to update closed order", logging.ErrorAttr(err))
 				} else {
-					hs.Logger.InfoContext(ctx, "Updated order stream", logging.IDAttr(dbID))
+					hs.Logger.InfoContext(ctx, "getTradesStream updated order stream", logging.IDAttr(dbID))
 				}
 
 				delete(hs.OrdersByPosition, orderID)
