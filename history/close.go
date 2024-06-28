@@ -18,7 +18,7 @@ func (hs *HService) CloseEligibleOrders(userID string) {
 
 	wsClient, err := hs.WSManager.GetUserRandomClient(userID)
 	if err != nil {
-		hs.Logger.ErrorContext(ctx, "Failed to get client to process getTradeRecords", logging.ErrorAttr(err))
+		hs.Logger.ErrorContext(ctx, "Failed to get client to process closing orders", logging.ErrorAttr(err))
 		return
 	}
 
@@ -33,8 +33,10 @@ func (hs *HService) CloseEligibleOrders(userID string) {
 	}
 
 	if len(ordersWithPosition) > 0 {
+		hs.Logger.InfoContext(ctx, "Will process order with position")
 		hs.closeOrdersWithPosition(ctx, apiH, ordersWithPosition)
 	} else {
+		hs.Logger.InfoContext(ctx, "Will process order without position")
 		hs.closeOrdersWithoutPosition(ctx, apiH)
 	}
 }
@@ -119,11 +121,12 @@ func (hs *HService) closeOrdersWithoutPosition(ctx context.Context, apiH control
 		if !tradeRecord.Closed {
 			for _, order := range orders {
 				if tradeRecord.Order2 == order.Number {
-					symbolResponse, err := apiH.GetSymbolExtended(ctx, order.Symbol)
+					symbol := order.Symbol
+					symbolResponse, err := apiH.GetSymbolExtended(ctx, symbol)
 					if err != nil {
 						hs.Logger.ErrorContext(ctx, "Failed to process GetSymbol",
 							logging.ErrorAttr(err),
-							logging.SymbolAttr(order.Symbol))
+							logging.SymbolAttr(symbol))
 						continue
 					}
 					hs.Logger.InfoContext(ctx, "Successfully processed GetSymbol", logging.RespAttr(symbolResponse))
@@ -133,15 +136,15 @@ func (hs *HService) closeOrdersWithoutPosition(ctx context.Context, apiH control
 						Expiration:    time.Now().Add(time.Minute).UnixMilli(),
 						Order:         &tradeRecord.Position,
 						Price:         symbolResponse.ReturnData.Ask,
-						Symbol:        order.Symbol,
+						Symbol:        symbol,
 						Type:          command.CLOSE,
 						Volume:        order.Volume,
 					}
-					tradeTransResp, err := apiH.TradeTransaction(ctx, order.Symbol, tradeTransInfo)
+					tradeTransResp, err := apiH.TradeTransaction(ctx, symbol, tradeTransInfo)
 					if err != nil {
 						hs.Logger.ErrorContext(ctx, "Failed to process TradeTransaction",
 							logging.ErrorAttr(err),
-							logging.SymbolAttr(order.Symbol))
+							logging.SymbolAttr(symbol))
 
 						var statusError *response.StatusError
 						if errors.As(err, &statusError) && statusError.ErrorCode == "SE199" {
@@ -160,11 +163,11 @@ func (hs *HService) closeOrdersWithoutPosition(ctx context.Context, apiH control
 					}
 					hs.Logger.InfoContext(ctx, "Successfully processed TradeTransaction", logging.RespAttr(tradeTransResp))
 
-					tradeTransStatusResp, err := apiH.TradeTransactionStatus(ctx, order.Symbol, tradeTransResp.ReturnData.Order)
+					tradeTransStatusResp, err := apiH.TradeTransactionStatus(ctx, symbol, tradeTransResp.ReturnData.Order)
 					if err != nil {
 						hs.Logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus",
 							logging.ErrorAttr(err),
-							logging.SymbolAttr(order.Symbol))
+							logging.SymbolAttr(symbol))
 						continue
 					}
 					hs.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransStatusResp))
