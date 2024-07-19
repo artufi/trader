@@ -177,23 +177,6 @@ func (os OrderService) Insert(o Order) (int, error) {
 	return o.ID, nil
 }
 
-func (os OrderService) UpdateOpened(orderID int, openPrice float64, openTime time.Time) (int, error) {
-	row := os.DB.QueryRow(`
-		UPDATE orders
-		SET 
-		    open_price = $2,
-		    open_time = $3
-		WHERE order_no = $1
-		RETURNING id`, orderID, openPrice, openTime)
-
-	var id int
-	err := row.Scan(&id)
-	if err != nil {
-		return id, fmt.Errorf("update opened order: %w", err)
-	}
-	return id, nil
-}
-
 type OrderClosedDetails struct {
 	// store nulls in the database to avoid ambiguity between zero values
 	OpenPrice  *float64
