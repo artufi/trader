@@ -12,7 +12,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ~/trading/data/postgresql:/var/lib/postgresql/data/pgdata
+      - /home/artufi/trading/data/postgresql:/var/lib/postgresql/data/pgdata
 
   adminer:
     image: adminer
@@ -31,7 +31,7 @@ services:
     depends_on:
       - db
     volumes:
-      - ~/trading/data/trader/app.log:~/trading/apps/trader/app.log
+      - /home/artufi/trading/data/trader/:/home/artufi/trading/apps/trader/app.log
 
 volumes:
   postgres-data:
