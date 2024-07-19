@@ -21,5 +21,15 @@ services:
     ports:
       - 8080:8080
 
+  trader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 4000:4000
+    volumes:
+      - /Users/artufi/GolandProjects/github.com/artufi/trader/:/Users/artufi/GolandProjects/github.com/artufi/trader/app.log
+
+
 volumes:
   postgres-data:
