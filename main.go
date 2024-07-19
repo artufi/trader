@@ -14,6 +14,7 @@ import (
 	ws "github.com/gorilla/websocket"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -39,6 +40,19 @@ func main() {
 
 	filenames := migration.Must(migration.Up(db))
 	logger.Info("Loaded migrations", "migrations", filenames)
+
+	userService := model.UserService{
+		Logger: logger,
+		DB:     db,
+	}
+	userID, err := strconv.Atoi(cfg.XTB.Demo.UserID)
+	if err != nil {
+		panic(err)
+	}
+	err = userService.Insert(userID)
+	if err != nil {
+		panic(err)
+	}
 
 	dialer := &ws.Dialer{}
 	wsManager := websocket.NewWSManager(cfg, dialer, logger)
