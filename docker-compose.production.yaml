@@ -30,6 +30,8 @@ services:
       - 4000:4000
     depends_on:
       - db
+    volumes:
+      - ~/trading/data/trader/app.log:~/trading/apps/trader/app.log
 
 volumes:
   postgres-data:
