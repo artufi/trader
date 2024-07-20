@@ -4,6 +4,8 @@ services:
   db:
     image: postgres
     restart: always
+    env_file:
+      - config/.env
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: ${PSQL_USER}
@@ -19,6 +21,8 @@ services:
     restart: always
     environment:
       ADMINER_DESIGN: dracula
+    depends_on:
+      - db
     ports:
       - 8080:8080
 
