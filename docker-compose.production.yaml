@@ -30,10 +30,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    restart: always
     ports:
       - 4000:4000
+    depends_on:
+      - db
     volumes:
-      - /home/artufi/trading/data/trader/:/home/artufi/trading/apps/trader/app.log
+      - /home/artufi/trading/data/trader/app.log:/app/app.log
 
 volumes:
   postgres-data:

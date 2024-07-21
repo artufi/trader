@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${PSQL_PASSWORD}
       POSTGRES_DB: ${PSQL_DATABASE}
     ports:
-      - 5432:5432
+      - 5433:5432
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
@@ -23,17 +23,19 @@ services:
     depends_on:
       - db
     ports:
-      - 8080:8080
+      - 8081:8080
 
   trader:
+    restart: always
+    depends_on:
+      - db
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - 4000:4000
+      - 4001:4000
     volumes:
-      - /Users/artufi/GolandProjects/github.com/artufi/trader/:/Users/artufi/GolandProjects/github.com/artufi/trader/app.log
-
+      - /Users/artufi/GolandProjects/github.com/artufi/trader/logi.log:/app/app.log
 
 volumes:
   postgres-data:
