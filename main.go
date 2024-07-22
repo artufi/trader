@@ -75,7 +75,7 @@ func main() {
 	go historyService.GetTradesStream(cfg.XTB.Demo.UserID)
 
 	go func() {
-		ticker := time.NewTicker(time.Second * 30)
+		ticker := time.NewTicker(time.Minute)
 		for {
 			select {
 			case <-ticker.C:
