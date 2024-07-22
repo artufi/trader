@@ -37,6 +37,3 @@ services:
       - db
     volumes:
       - /home/artufi/trading/data/trader/app.log:/app/app.log
-
-volumes:
-  postgres-data:
