@@ -55,7 +55,7 @@ func (us UserService) SelectUserByUsername(userID int) (User, error) {
 		SELECT *
 		FROM users
 		WHERE username = $1`, userID)
-	err := row.Scan(&user)
+	err := row.Scan(&user.ID, &user.Username)
 	if err != nil {
 		return User{}, fmt.Errorf("select user by username: %w", err)
 	}
