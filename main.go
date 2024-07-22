@@ -90,6 +90,7 @@ func main() {
 		Logger:            logger,
 		PredictionService: model.PredictionService{DB: db},
 		OrderService:      model.OrderService{DB: db},
+		UserService:       userService,
 	}
 
 	r := chi.NewRouter()

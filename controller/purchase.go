@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
+	"strconv"
 )
 
 type Purchase struct {
@@ -21,6 +22,7 @@ type Purchase struct {
 
 	PredictionService model.PredictionService
 	OrderService      model.OrderService
+	UserService       model.UserService
 }
 
 func (p *Purchase) PurchasesHandler() http.HandlerFunc {
@@ -207,6 +209,21 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 
 		p.Logger.InfoContext(ctx, "Start processing purchase request")
 
+		userIDInt, err := strconv.Atoi(userID)
+		if err != nil {
+			p.Logger.ErrorContext(ctx, "Failed to convert userID",
+				logging.ErrorAttr(err))
+			http.Error(w, "Failed to convert userID", http.StatusInternalServerError)
+			return
+		}
+		user, err := p.UserService.SelectUserByUsername(userIDInt)
+		if err != nil {
+			p.Logger.ErrorContext(ctx, "Failed to get user from database",
+				logging.ErrorAttr(err))
+			http.Error(w, "Failed to get user from database", http.StatusInternalServerError)
+			return
+		}
+
 		wsClient, err := p.WSManager.GetUserRandomClient(userID)
 		if err != nil {
 			p.Logger.ErrorContext(ctx, "Failed to get client to process purchase request", logging.ErrorAttr(err))
@@ -289,7 +306,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 		p.Logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeTransStatusResp))
 
 		prediction := model.Prediction{
-			UserID:            1,
+			UserID:            user.ID,
 			PredictionDetails: predictionDetails,
 		}
 		predID, err := dbH.InsertPrediction(ctx, prediction)
@@ -341,7 +358,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 
 			order = model.Order{
 				Number:         tradeTransResp.ReturnData.Order,
-				UserID:         1,
+				UserID:         user.ID,
 				Position:       &position,
 				PredictionID:   predID,
 				RequestStatus:  response.RequestStatusName[reqStatus],
@@ -353,7 +370,7 @@ func (p *Purchase) PurchaseHandler() http.HandlerFunc {
 			if errors.As(errReq, &rsErr) {
 				order = model.Order{
 					Number:         tradeTransResp.ReturnData.Order,
-					UserID:         1,
+					UserID:         user.ID,
 					PredictionID:   predID,
 					RequestStatus:  rsErr.RequestStatus,
 					Message:        &rsErr.Message,

@@ -6,6 +6,13 @@ import (
 	"log/slog"
 )
 
+type User struct {
+	// PRIMARY KEY
+	ID int
+	// XTB user id
+	Username int
+}
+
 type UserService struct {
 	Logger *slog.Logger
 	DB     *sql.DB
@@ -40,4 +47,17 @@ func (us UserService) Insert(userID int) error {
 
 	us.Logger.Info(fmt.Sprintf("Inserted user with username: %d, assigned id: %d", userID, userDatabaseID))
 	return nil
+}
+
+func (us UserService) SelectUserByUsername(userID int) (User, error) {
+	var user User
+	row := us.DB.QueryRow(`
+		SELECT *
+		FROM users
+		WHERE username = $1`, userID)
+	err := row.Scan(&user)
+	if err != nil {
+		return User{}, fmt.Errorf("select user by username: %w", err)
+	}
+	return user, nil
 }
