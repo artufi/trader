@@ -13,8 +13,10 @@ import (
 	"time"
 )
 
+const closeServiceName = "CloseService"
+
 func (hs *HService) CloseEligibleOrders(userID string) {
-	ctx := logging.AppendAttrsCtx(context.Background(), logging.ServiceName(serviceName))
+	ctx := logging.AppendAttrsCtx(context.Background(), logging.ServiceName(closeServiceName))
 
 	wsClient, err := hs.WSManager.GetUserRandomClient(userID)
 	if err != nil {
