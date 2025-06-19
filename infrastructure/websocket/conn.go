@@ -38,9 +38,10 @@ type ConnManager struct {
 //			 }
 //		 }
 //	}
-func (cs ConnManager) OpenConnPool(userId, password string, initSize int) {
+func (cs ConnManager) OpenConnPool(ctx context.Context, userId, password string, initSize int) {
 	go func() {
-		ctx := logging.AppendAttrsCtx(context.Background(), logging.UserIDAttr(userId), logging.ServiceName(serviceName))
+		ctx = logging.AppendAttrsCtx(ctx, logging.ServiceName(serviceName), logging.UserIDAttr(userId))
+		cs.Logger.InfoContext(ctx, "Starting connection pool", slog.Any("size", initSize))
 		if initSize < 1 {
 			cs.Logger.WarnContext(ctx, "Connection pool initial size not specified")
 		}
@@ -53,11 +54,16 @@ func (cs ConnManager) OpenConnPool(userId, password string, initSize int) {
 
 func (cs ConnManager) keepUserClientConnected(ctx context.Context, userId, password string, connNumber int) {
 	attempt := 1
-	// log old streamSessionID to trace connections
+	// Log old streamSessionID to trace connections.
 	var oldSSID string
 	for {
-		// new variable to prevent adding the same key more than once
-		// initial connection does not have oldStreamID
+		if ctx.Err() != nil {
+			cs.Logger.InfoContext(ctx, "Context done, creating new client connection interrupted",
+				logging.ErrorAttr(ctx.Err()))
+			return
+		}
+		// A new variable to prevent adding the same key more than once.
+		// Initial connection does not have oldStreamID.
 		oldSSIDCtx := logging.AppendAttrsCtx(ctx, logging.OldStreamID(oldSSID))
 		wsClient, err := cs.newConnection(oldSSIDCtx, userId, password, connNumber)
 		if err != nil {
@@ -65,47 +71,49 @@ func (cs ConnManager) keepUserClientConnected(ctx context.Context, userId, passw
 				logging.AttemptAttr(attempt))
 			if attempt == cs.Cfg.Client.Connection.MaxAttempts {
 				cs.Logger.ErrorContext(oldSSIDCtx, "Critical error connection could not be established")
-				// TODO
-				// in future maybe send email
-				panic("critical error connection could not be established check logs and XTB platform")
+				// TODO: in the future maybe send email
+				panic("conn manager critical error connection could not be established check logs and XTB platform")
 				return
 			}
 			attempt++
 			time.Sleep(time.Second * time.Duration(cs.Cfg.Client.Connection.ReConnectNextTrySec))
 			continue
 		}
-		// new variable to prevent adding the same key more than once
 		newSSIDCtx := logging.AppendAttrsCtx(oldSSIDCtx, logging.StreamID(wsClient.StreamSessionID))
 		go wsClient.Ping(newSSIDCtx, time.Duration(cs.Cfg.Client.Ping.IntervalSec))
 
 		select {
-		// listen for client disconnections
+		// Listen for client disconnections.
 		case <-wsClient.ReConnCh:
 			oldSSID = wsClient.StreamSessionID
 			cs.Logger.InfoContext(newSSIDCtx, "Client disconnected trying to reconnect...")
+		case <-ctx.Done():
+			cs.Logger.InfoContext(newSSIDCtx, "Context done, reconnection interrupted",
+				logging.ErrorAttr(ctx.Err()))
+			return
 		}
 	}
 }
 
-// TODO do not allow further processing when at least one connection is not established
+// TODO: do not allow further processing when at least one connection is not established;
 func (cs ConnManager) newConnection(ctx context.Context, userID, password string, connNumber int) (*WSClient, error) {
 	cs.Logger.InfoContext(ctx, "Start establishing user connection")
 	wsClient, err := cs.WSManager.DialForNewClient(ctx, cs.Cfg.XTB.Demo.WebSocketURL, nil, userID)
 	if err != nil {
-		return nil, fmt.Errorf("conn service create client: %w", err)
+		return nil, fmt.Errorf("conn manager new connection create client: %w", err)
 	}
 	proc := processor.NewProc(wsClient)
 
 	loginResponse, err := proc.Login(ctx, fmt.Sprintf("user=%sclient=%v", userID, connNumber),
 		userID, password)
 	if err != nil {
-		return nil, fmt.Errorf("conn service login: %w", err)
+		return nil, fmt.Errorf("conn manager new connection login: %w", err)
 	}
 	cs.Logger.InfoContext(ctx, "Successfully established user connection", logging.RespAttr(loginResponse))
 
-	// set client SSID
+	// Set client SSID.
 	wsClient.StreamSessionID = loginResponse.StreamSessionId
-	// set client connection number
+	// Set client connection number.
 	wsClient.ConnID = connNumber
 	return wsClient, nil
 }
