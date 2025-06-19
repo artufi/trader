@@ -31,7 +31,7 @@ func (h LogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 // AppendAttrsCtx TODO what if attr already written?
 // create newCtx := or make changes here to detect adding the same key
-// and override value when detected
+// and override value when detected.
 func AppendAttrsCtx(parent context.Context, attrs ...slog.Attr) context.Context {
 	if parent == nil {
 		parent = context.Background()

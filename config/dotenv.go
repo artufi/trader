@@ -78,6 +78,11 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 		panic(err)
 	}
 
+	cfg.Client.Order.Close.IntervalSec, err = strconv.Atoi(os.Getenv("WS_CLIENT_ORDER_CLOSE_INTERVAL_SEC"))
+	if err != nil {
+		panic(err)
+	}
+
 	cfg.BuySellParams.Volume, err = strconv.ParseFloat(os.Getenv("VOLUME_TO_BUY_SELL"), 64)
 	if err != nil {
 		panic(err)

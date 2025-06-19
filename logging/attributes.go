@@ -3,6 +3,7 @@ package logging
 import (
 	"github.com/artufi/trader/model"
 	"log/slog"
+	"time"
 )
 
 func AttemptAttr(attempt int) slog.Attr {
@@ -67,4 +68,8 @@ func PositionAttr(position int) slog.Attr {
 
 func OrderAttr(position int) slog.Attr {
 	return slog.Int("order", position)
+}
+
+func IntervalAttr(interval time.Duration) slog.Attr {
+	return slog.Any("interval", interval)
 }

@@ -40,12 +40,11 @@ func (h DBHandler) InsertPrediction(ctx context.Context, prediction model.Predic
 }
 
 func (h DBHandler) handleInsertionError(ctx context.Context, err error, id int, operation string) (int, error) {
-	// Auto increment on database ID, if record is inserted then id is always != 0
+	// Auto increment on database ID, if record is inserted then id is always != 0.
 	if id == 0 {
 		return -1, fmt.Errorf("insert no rows affected: %v", err)
 	}
-	h.Logger.WarnContext(ctx,
-		fmt.Sprintf("Error occurred while inserting %s but record was inserted successfully", operation),
+	h.Logger.WarnContext(ctx, fmt.Sprintf("Error occurred while inserting %s but record was inserted successfully", operation),
 		logging.ErrorAttr(err),
 		logging.IDAttr(id))
 	return id, nil

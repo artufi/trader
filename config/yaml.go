@@ -7,14 +7,8 @@ import (
 	"os"
 )
 
-func Must(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-// LoadYAMLConf YAML format is required
-// conf must be pointer
+// LoadYAMLConf YAML format is required,
+// conf must be pointer.
 func LoadYAMLConf(name string, conf interface{}) error {
 	data, err := os.ReadFile(name)
 	if err != nil {
@@ -27,8 +21,8 @@ func LoadYAMLConf(name string, conf interface{}) error {
 	return nil
 }
 
-// LoadFSYAMLConf YAML format is required
-// conf must be pointer
+// LoadFSYAMLConf YAML format is required,
+// conf must be pointer.
 func LoadFSYAMLConf(fsys fs.FS, name string, conf interface{}) error {
 	data, err := fs.ReadFile(fsys, name)
 	if err != nil {
