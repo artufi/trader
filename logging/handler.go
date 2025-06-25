@@ -7,9 +7,7 @@ import (
 
 type ctxKey string
 
-const (
-	logAttrs ctxKey = "logAttrs"
-)
+const logAttrs ctxKey = "logAttrs"
 
 type LogHandler struct {
 	slog.Handler

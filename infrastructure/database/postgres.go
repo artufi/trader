@@ -18,7 +18,7 @@ func MustOpen(db *sql.DB, err error) *sql.DB {
 }
 
 // Open will open a SQL connection with the provided Postgres database.
-// *sql.DB should be closed
+// *sql.DB should be closed.
 func Open(config PostgresConfig) (*sql.DB, error) {
 	pool, err := sql.Open("pgx", config.String())
 	if err != nil {
@@ -28,7 +28,7 @@ func Open(config PostgresConfig) (*sql.DB, error) {
 }
 
 // OpenPool will open a SQL Pool connection with the provided Postgres database.
-// *sql.DB should be closed
+// *sql.DB should be closed.
 func OpenPool(ctx context.Context, config PostgresConfig) (*sql.DB, error) {
 	pool, err := pgxpool.New(ctx, config.String())
 	if err != nil {

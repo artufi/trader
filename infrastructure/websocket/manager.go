@@ -30,7 +30,7 @@ type WSManager struct {
 	dialer *websocket.Dialer
 	logger *slog.Logger
 
-	// connections per user
+	// Connections per user.
 	userClients map[string]map[*WSClient]struct{}
 
 	// To prevent concurrent goroutines from accessing the same logged-in *WSClient connection,
@@ -46,8 +46,8 @@ type WSManager struct {
 }
 
 // DialForNewClient
-// creates a new client
-// reads messages
+// creates a new client,
+// reads messages.
 func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestHeader http.Header, userID string) (*WSClient, error) {
 	conn, resp, err := wsm.dialer.Dial(url, requestHeader)
 	if err != nil {
@@ -73,7 +73,7 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 
 	wsm.addClient(ctx, client)
 
-	// read client messages
+	// Read client messages.
 	go client.ReadMessages(ctx)
 
 	return client, nil
@@ -81,8 +81,8 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 
 // DialForNewStreamClient
 // creates a new stream client,
-// reads messages
-// sends ping messages
+// reads messages,
+// sends ping messages.
 func (wsm *WSManager) DialForNewStreamClient(ctx context.Context, url string, requestHeader http.Header, userID string) (*WSClientStream, error) {
 	conn, resp, err := wsm.dialer.Dial(url, requestHeader)
 	if err != nil {
@@ -122,7 +122,7 @@ func (wsm *WSManager) DialForNewStreamClient(ctx context.Context, url string, re
 	go client.ReadMessages(ctx)
 	// SSID is known at this point, so it is better to ping immediately after creating client.
 	// This is different situation than normal WSClient where connections are managed by ConnManager
-	// and SSID is not known before log into XTB
+	// and SSID is not known before log into XTB.
 	go client.Ping(ctx, time.Duration(wsm.cfg.Client.Stream.Ping.IntervalSec))
 
 	return client, nil
@@ -156,8 +156,8 @@ func (wsm *WSManager) RemoveClient(ctx context.Context, client *WSClient) {
 }
 
 func (wsm *WSManager) GetUserRandomClient(userID string) (*WSClient, error) {
-	// RWMutex to block access during concurrent read and write
-	// RWMutex (RLock) does not block when there is no lock on write (add, delete)
+	// RWMutex to block access during concurrent read and write.
+	// RWMutex (RLock) does not block when there is no lock on write (add, delete).
 	wsm.userClientsMutex.RLock()
 	defer wsm.userClientsMutex.RUnlock()
 

@@ -36,7 +36,7 @@ const (
 var ErrNoAction = errors.New("prepare TradeTransInfo: no action")
 
 func (pd PredictionDetails) PrepareTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
-	// TODO what if 0?
+	// TODO: what if 0?
 	switch pd.ModelSetup.ModelType {
 	case Buy:
 		if pd.TakeProfit >= 0 {
@@ -52,8 +52,7 @@ func (pd PredictionDetails) PrepareTradeTransInfo(symbolData response.GetSymbolE
 	return command.TradeTransInfo{}, fmt.Errorf("prepare TradeTransInfo: Unknown ModelType: %q", pd.ModelSetup.ModelType)
 }
 
-// TODO
-// what about order and offset?
+// TODO: what about order and offset?
 func (pd PredictionDetails) prepareBUYTradeTransInfo(symbolData response.GetSymbolExtended, volumeToBuy float64) (command.TradeTransInfo, error) {
 	// precision to two decimal places
 	precision := math.Pow(10, 2)
