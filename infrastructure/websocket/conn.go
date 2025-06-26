@@ -19,7 +19,7 @@ type ConnManager struct {
 	WSManager *WSManager
 }
 
-// OpenConnPool TODO
+// OpenConnPool TODO:
 // In the future, it would be beneficial to open a new connection when a new request arrives.
 // If a new request arrives, check the idle map:
 // - If the idle map does not have a free connection, then spawn a new connection.
@@ -71,7 +71,7 @@ func (cs ConnManager) keepUserClientConnected(ctx context.Context, userId, passw
 				logging.AttemptAttr(attempt))
 			if attempt == cs.Cfg.Client.Connection.MaxAttempts {
 				cs.Logger.ErrorContext(oldSSIDCtx, "Critical error connection could not be established")
-				// TODO: in the future maybe send email
+				// TODO: in the future maybe send an email.
 				panic("conn manager critical error connection could not be established check logs and XTB platform")
 				return
 			}
@@ -95,7 +95,7 @@ func (cs ConnManager) keepUserClientConnected(ctx context.Context, userId, passw
 	}
 }
 
-// TODO: do not allow further processing when at least one connection is not established;
+// TODO: do not allow further processing when at least one connection is not established.
 func (cs ConnManager) newConnection(ctx context.Context, userID, password string, connNumber int) (*WSClient, error) {
 	cs.Logger.InfoContext(ctx, "Start establishing user connection")
 	wsClient, err := cs.WSManager.DialForNewClient(ctx, cs.Cfg.XTB.Demo.WebSocketURL, nil, userID)

@@ -92,7 +92,9 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 		default:
 			// TODO:
 			// Since ReadMessage is blocking, to better respond to ctx.Done cancellation,
-			// run ReadMessage inside a goroutine, e.g., go func() { _, response, err := wsc.conn.ReadMessage() ... }()
+			// run ReadMessage in a goroutine, e.g.,
+			// go func() { _, message, err := wsc.conn.ReadMessage(); msgCh <- message }()
+			// This allows non-blocking reads and sends the message to a channel when data arrives.
 			_, response, err := wsc.conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure,
@@ -336,7 +338,9 @@ func (wsc *WSClientStream) ReadMessages(ctx context.Context) {
 		default:
 			// TODO:
 			// Since ReadMessage is blocking, to better respond to ctx.Done cancellation,
-			// run ReadMessage inside a goroutine, e.g., go func() { _, response, err := wsc.conn.ReadMessage() ... }()
+			// run ReadMessage in a goroutine, e.g.,
+			// go func() { _, message, err := wsc.conn.ReadMessage(); msgCh <- message }()
+			// This allows non-blocking reads and sends the message to a channel when data arrives.
 			_, response, err := wsc.conn.ReadMessage()
 			if err != nil {
 				readerErr = fmt.Errorf("client-stream reader failure: %w", err)

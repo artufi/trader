@@ -76,7 +76,7 @@ func (hs *HService) GetTradesStream(ctx context.Context, userID string) {
 		if err != nil {
 			hs.Logger.ErrorContext(ctx, "Failed to dial for a new stream client to process getTrades will try again...",
 				logging.ErrorAttr(err))
-			// TODO: implement retry with a max attempt limit
+			// TODO: implement retry with a max attempt limit.
 			time.Sleep(retryBackoff)
 			continue
 		}
