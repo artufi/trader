@@ -138,8 +138,10 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 				continue
 			}
 
+			wsc.mutex.Lock()
 			c := wsc.pending[customTag.ID]
 			if c == nil {
+				wsc.mutex.Unlock()
 				wsc.logger.ErrorContext(ctx,
 					"Client reader response with specified customTag.ID does not correspond to any pending request",
 					"customTag", customTag.ID)
@@ -147,6 +149,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 			}
 			// Assign response to pending call.
 			c.Resp = response
+			wsc.mutex.Unlock()
 
 			// c.Done is a buffered channel of 1, other cases than the c.Done <- true are even impossible to occur
 			// if no one is waiting to receive from the c.Done, then Go runtime or defer will clear resources.
