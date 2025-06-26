@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/artufi/trader/http/middleware"
 	"github.com/artufi/trader/logging"
 	"log/slog"
@@ -30,7 +31,9 @@ func (rh ResponseHelper) WriteJSON(ctx context.Context, statusCode int, jsonData
 		raw, err := json.Marshal(fallback)
 		if err != nil {
 			rh.Logger.ErrorContext(ctx, "Failed to marshal fallback error", logging.ErrorAttr(err))
-			http.Error(rh.Writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			rh.setHeaders()
+			rh.Writer.WriteHeader(http.StatusInternalServerError)
+			rh.Writer.Write([]byte(fmt.Sprintf(`{"error":%q}`, err)))
 			return
 		}
 
@@ -52,12 +55,16 @@ func (rh ResponseHelper) WriteAndLogError(ctx context.Context, statusCode int, m
 }
 
 func (rh ResponseHelper) writeRawJSON(ctx context.Context, statusCode int, data []byte) {
-	rh.Writer.Header().Set("Content-Type", "application/json")
-	if rh.TraceID != "" {
-		rh.Writer.Header().Set(middleware.XTraceIDHeader, rh.TraceID)
-	}
+	rh.setHeaders()
 	rh.Writer.WriteHeader(statusCode)
 	if _, err := rh.Writer.Write(data); err != nil {
 		rh.Logger.ErrorContext(ctx, "Failed to write response", logging.ErrorAttr(err))
+	}
+}
+
+func (rh ResponseHelper) setHeaders() {
+	rh.Writer.Header().Set("Content-Type", "application/json")
+	if rh.TraceID != "" {
+		rh.Writer.Header().Set(middleware.XTraceIDHeader, rh.TraceID)
 	}
 }
