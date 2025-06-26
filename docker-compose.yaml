@@ -35,7 +35,7 @@ services:
     ports:
       - 4001:4000
     volumes:
-      - /Users/artufi/GolandProjects/github.com/artufi/trader/logi.log:/app/app.log
+      - ./logs/app.log:/app/app.log
 
 volumes:
   postgres-data:

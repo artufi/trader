@@ -39,6 +39,11 @@ type AppConfig struct {
 				IntervalSec int
 			}
 		}
+		Order struct {
+			Close struct {
+				IntervalSec int
+			}
+		}
 	}
 
 	BuySellParams struct {

@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/xtb/jsonform"
@@ -58,11 +59,11 @@ func (wsc *WSClient) StopSendRateLimiter() {
 }
 
 func (wsc *WSClient) ReadMessages(ctx context.Context) {
-	// general reader error that cannot be directly assigned to a specific call (independent of a client write)
+	// General reader error that cannot be directly assigned to a specific call (independent of a client write).
 	var readerErr error
 
 	defer func() {
-		// send signal to reconnect client
+		// Send signal to reconnect client.
 		close(wsc.ReConnCh)
 		wsc.manager.RemoveClient(ctx, wsc)
 
@@ -77,21 +78,23 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 		wsc.mutex.Unlock()
 	}()
 
-	// setup reader
+	// Setup reader limits.
 	wsc.conn.SetReadLimit(maxMessageSize)
 	//wsc.conn.SetReadDeadline(time.Now().Add(readWait))
 
 	chanBreaker := time.NewTimer(time.Second * receiverTimeout)
 	for {
 		select {
-		// context done can be triggered before any message is read
+		// Context done can be triggered before any message is read.
 		case <-ctx.Done():
 			readerErr = fmt.Errorf("client reader context done before reading messages: %w", ctx.Err())
 			return
-		// conn.ReadMessage is blocking so default case here is not the best pick
-		// but context can be done before Read, so it makes sense
 		default:
-			// blocking method
+			// TODO:
+			// Since ReadMessage is blocking, to better respond to ctx.Done cancellation,
+			// run ReadMessage in a goroutine, e.g.,
+			// go func() { _, message, err := wsc.conn.ReadMessage(); msgCh <- message }()
+			// This allows non-blocking reads and sends the message to a channel when data arrives.
 			_, response, err := wsc.conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure,
@@ -125,7 +128,7 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 			// allows for the timer to be reset for the next Read operation.
 			chanBreaker.Reset(time.Second * receiverTimeout)
 
-			// read customTag from response to link to request
+			// Read customTag from response to link to request.
 			customTag := struct {
 				ID string `json:"customTag"`
 			}{}
@@ -142,34 +145,31 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 					"customTag", customTag.ID)
 				continue
 			}
-			// assign response to call
+			// Assign response to pending call.
 			c.Resp = response
 
 			// c.Done is a buffered channel of 1, other cases than the c.Done <- true are even impossible to occur
-			// if no one is waiting to receive from the c.Done, then Go runtime or defer will clear resources
+			// if no one is waiting to receive from the c.Done, then Go runtime or defer will clear resources.
 			select {
-			// confirm sending response to Writer
+			// Confirm sending response to Writer.
 			case c.Done <- true:
 				wsc.mutex.Lock()
-				// remove call from map as response is already assigned
+				// Remove call from map as response is already assigned.
 				delete(wsc.pending, c.ID)
 				wsc.mutex.Unlock()
-
-			// only possible if a client writer stops waiting for the response - client won't receive error cause as no one is waiting for it
+			// Only possible if a client writer stops waiting for the response - client won't receive error cause as no one is waiting for it
 			// or a client reader timeout is so short that chanBreaker triggers before sending the response - client will receive error cause
-			// or somebody changes a buffer size of the call.Done channel to 0 (processing time increase) - client will receive error cause
+			// or somebody changes a buffer size of the call.Done channel to 0 (processing time increase) - client will receive error cause.
 			case <-chanBreaker.C:
 				wsc.logger.WarnContext(ctx, "Client reader waiting for channel response timeout - protection against client reader block")
 				c.Err = fmt.Errorf("client reader timeout while waiting for accepting response by writer: " +
 					"protection against client reader block")
-				// close and remove from map to prevent panic when closing channel in defer
+				// Close and remove from map to prevent panic when closing channel in defer.
 				wsc.closeAndDelete(c)
-
-			// context done can be triggered while sending response
 			case <-ctx.Done():
 				wsc.logger.WarnContext(ctx, "Client reader operation canceled - context done", logging.ErrorAttr(ctx.Err()))
 				c.Err = fmt.Errorf("client reader operation canceled - context done: %w", ctx.Err())
-				// close and remove from map to prevent panic when closing channel in defer
+				// Close and remove from map to prevent panic when closing channel in defer.
 				wsc.closeAndDelete(c)
 			}
 		}
@@ -183,7 +183,7 @@ func (wsc *WSClient) closeAndDelete(c *call) {
 	wsc.mutex.Unlock()
 }
 
-// Done is a buffered chan with size 1, it prevents blocking of the client reader
+// Done is a buffered chan with size 1, it prevents blocking of the client reader.
 type call struct {
 	ID   string
 	Req  []byte
@@ -194,27 +194,27 @@ type call struct {
 
 func (wsc *WSClient) WriteText(ctx context.Context, messageID string, data []byte) ([]byte, error) {
 	select {
-	// *http.Request context is done after processing request
-	// it can be any passed context
-	// do not process message if context is done before writing message
+	// *http.Request context is done after processing request.
+	// Tt can be any passed context.
+	// Do not process message if context is done before writing message.
 	case <-ctx.Done():
 		return nil, fmt.Errorf("client writer context done before writing message: %w", ctx.Err())
 
-	// ticker channel has reference to client, so it calculates time immediately after receiving Tick
-	// it doesn't start timer when entering this method it starts immediately when client is created
+	// Ticker channel has reference to client, so it calculates time immediately after receiving Tick.
+	// It doesn't start timer when entering this method it starts immediately when client is created.
 	case <-wsc.sendRateLimiter.C:
 		wsc.logger.InfoContext(ctx, "Writing message", logging.MsgAttr(string(data)))
 
 		c := &call{
 			ID:  messageID,
 			Req: data,
-			// buffered chan with size 1, it prevents blocking of the client reader
+			// Buffered chan with size 1, it prevents blocking of the client reader.
 			Done: make(chan bool, 1),
 		}
 
-		// protect against concurrent writes into connection and map
+		// Protect against concurrent writes into connection and map.
 		wsc.mutex.Lock()
-		// add request to pending map to match with response
+		// Add request to pending map to match with response.
 		wsc.pending[c.ID] = c
 		wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
 		err := wsc.conn.WriteMessage(websocket.TextMessage, data)
@@ -223,11 +223,9 @@ func (wsc *WSClient) WriteText(ctx context.Context, messageID string, data []byt
 			return nil, fmt.Errorf("client writer failed to write message through websocket: %w", err)
 		}
 
-		// TODO
-		// maybe instantiate when creating client?
-		// maybe context.WithTimeout instead of chanBreaker?
-		// start timer after writing message
-		chanBreaker := time.NewTimer(time.Second * receiverTimeout)
+		// Start timer after writing message.
+		ctx, cancel := context.WithTimeout(ctx, time.Second*receiverTimeout)
+		defer cancel()
 
 		select {
 		case _, ok := <-c.Done:
@@ -235,18 +233,18 @@ func (wsc *WSClient) WriteText(ctx context.Context, messageID string, data []byt
 				return nil, fmt.Errorf("client writer failed to read a response: %w", c.Err)
 			}
 			return c.Resp, nil
-		case <-chanBreaker.C:
-			return nil, fmt.Errorf("client writer timeout while waiting for channel response: protection against goroutine leak")
-
-		// context done can be triggered while waiting for a response
 		case <-ctx.Done():
-			return nil, fmt.Errorf("client writer context done while waiting for a response: %w", ctx.Err())
+			err = ctx.Err()
+			if errors.Is(err, context.DeadlineExceeded) {
+				return nil, fmt.Errorf("client writer timeout while waiting for a response: %w", err)
+			}
+			return nil, fmt.Errorf("client writer context done while waiting for a response: %w", err)
 		}
 	}
 }
 
 // Ping is better to be invoked outside of manager to pass context with more information as manager
-// does not have all of them when Dialing for a new client
+// does not have all of them when Dialing for a new client.
 func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 	if interval < 1 {
 		wsc.logger.WarnContext(ctx, "Too low ping interval value", "value", interval)
@@ -264,14 +262,13 @@ func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 				return
 			}
 		case <-ctx.Done():
-			err := ctx.Err()
-			wsc.logger.ErrorContext(ctx, "Client Ping operation canceled - context done", logging.ErrorAttr(err))
+			wsc.logger.InfoContext(ctx, "Client Ping operation canceled - context done")
 			return
 		}
 	}
 }
 
-// WSClientStream highly depends on logged in WSClient
+// WSClientStream highly depends on logged in WSClient.
 type WSClientStream struct {
 	ConnID int
 	conn   *websocket.Conn
@@ -291,7 +288,7 @@ type WSClientStream struct {
 	UserID          string
 	StreamSessionID string
 
-	// Response from ReadMessages send by WSClientStream
+	// Response from ReadMessages send by WSClientStream.
 	ReaderRespCh chan ReaderResp
 }
 
@@ -301,10 +298,10 @@ type ReaderResp struct {
 }
 
 // ReleaseClientStreamResources releases *WSClient stream capabilities (turn off stream mode)
-// allowing other WSClientStream reuse particular *WSClient streamSessionId if available
+// allowing other WSClientStream reuse particular *WSClient streamSessionId if available.
 func (wsc *WSClientStream) ReleaseClientStreamResources() {
-	// client can be nil if something happened with logged in *WSClient and GC
-	// cleans resources and removes it from memory
+	// Client can be nil if something happened with logged in *WSClient and GC.
+	// Cleans resources and removes it from memory.
 	if wsc.client != nil {
 		wsc.client.Stream = false
 	}
@@ -320,7 +317,7 @@ func (wsc *WSClientStream) StopSendRateLimiter() {
 
 func (wsc *WSClientStream) ReadMessages(ctx context.Context) {
 	var readerErr error
-	// setup reader
+	// Setup reader.
 	//wsc.conn.SetReadLimit(maxMessageSize)
 	//wsc.conn.SetReadDeadline(time.Now().Add(readWait))
 
@@ -334,15 +331,16 @@ func (wsc *WSClientStream) ReadMessages(ctx context.Context) {
 	chanBreaker := time.NewTimer(time.Second * receiverTimeout)
 	for {
 		select {
-		// context done can be triggered before any message is read
+		// Context done can be triggered before any message is read.
 		case <-ctx.Done():
 			readerErr = fmt.Errorf("client-stream reader context done before reading messages: %w", ctx.Err())
 			return
-		// conn.ReadMessage is blocking so default case here is not the best pick
-		// but context can be done before Read, so it makes sense
 		default:
-			// blocking method
-			// to better fit with ctx.Done use goroutine (call it like: go func() { _, response, err := wsc.conn.ReadMessage() }
+			// TODO:
+			// Since ReadMessage is blocking, to better respond to ctx.Done cancellation,
+			// run ReadMessage in a goroutine, e.g.,
+			// go func() { _, message, err := wsc.conn.ReadMessage(); msgCh <- message }()
+			// This allows non-blocking reads and sends the message to a channel when data arrives.
 			_, response, err := wsc.conn.ReadMessage()
 			if err != nil {
 				readerErr = fmt.Errorf("client-stream reader failure: %w", err)
@@ -374,7 +372,7 @@ func (wsc *WSClientStream) ReadMessages(ctx context.Context) {
 				wsc.logger.WarnContext(ctx, "Client-stream reader waiting for channel response timeout - protection against client reader block")
 				readerErr = fmt.Errorf("client-stream reader timeout while waiting for accepting response by writer: " +
 					"protection against client reader block")
-			// context is done, no one want response
+			// Context is done, no one wants response.
 			case <-ctx.Done():
 				readerErr = fmt.Errorf("client-stream reader operation canceled - context done: %w", ctx.Err())
 				return
@@ -385,12 +383,10 @@ func (wsc *WSClientStream) ReadMessages(ctx context.Context) {
 
 func (wsc *WSClientStream) WriteText(ctx context.Context, messageID string, data []byte) ([]byte, error) {
 	select {
-	// do not process message if context is done before writing message
 	case <-ctx.Done():
 		return nil, fmt.Errorf("client-stream writer context done before writing message: %w", ctx.Err())
-
-	// ticker channel has reference to client, so it calculates time immediately after receiving Tick
-	// it doesn't start timer when entering this method it starts immediately when client is created
+	// Ticker channel has reference to client, so it calculates time immediately after receiving Tick
+	// it doesn't start timer when entering this method it starts immediately when client is created.
 	case <-wsc.sendRateLimiter.C:
 		wsc.logger.InfoContext(ctx, "Writing stream message", logging.MsgAttr(string(data)))
 
@@ -405,7 +401,7 @@ func (wsc *WSClientStream) WriteText(ctx context.Context, messageID string, data
 
 func (wsc *WSClientStream) Ping(ctx context.Context, interval time.Duration) {
 	if interval < 1 {
-		wsc.logger.WarnContext(ctx, "Client-stream too low ping interval value", "value", interval)
+		wsc.logger.WarnContext(ctx, "Client-stream too low ping interval value", logging.IntervalAttr(interval))
 		return
 	}
 	ticker := time.NewTicker(time.Second * interval)

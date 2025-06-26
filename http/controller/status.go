@@ -4,26 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/http/middleware"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/xtb/processor"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 )
 
 func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManager, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		traceID := uuid.New().String()
+		traceID := middleware.GetTraceID(r.Context())
 		userID := cfg.XTB.Demo.UserID
 		ctx := logging.AppendAttrsCtx(r.Context(), logging.TraceIDAttr(traceID), logging.UserIDAttr(userID))
 
 		logger.InfoContext(ctx, "Start processing transaction status request")
 
+		rh := ResponseHelper{Logger: logger, Writer: w, TraceID: traceID}
+
 		wsClient, err := wsManager.DialForNewClient(ctx, cfg.XTB.Demo.WebSocketURL, nil, userID)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to create a new client", logging.ErrorAttr(err))
-			http.Error(w, "Failed to establish connection", http.StatusInternalServerError)
+			rh.WriteAndLogError(ctx, http.StatusInternalServerError, "Failed to establish connection", err)
 			return
 		}
 		defer func() {
@@ -35,11 +36,9 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 			TraceID: traceID,
 		}
 
-		// log user into XTB
 		loginResponse, err := apiH.Login(ctx, cfg.XTB.Demo.UserID, cfg.XTB.Demo.Password)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to login", logging.ErrorAttr(err))
-			http.Error(w, "Failed to login", http.StatusBadRequest)
+			rh.WriteAndLogError(ctx, http.StatusBadRequest, "Login failed", err)
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed Login", logging.RespAttr(loginResponse))
@@ -49,21 +48,18 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 		}{}
 		err = json.NewDecoder(r.Body).Decode(&order)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to read request body with order number", logging.ErrorAttr(err))
-			http.Error(w, "Failed to read body, expected order number", http.StatusBadRequest)
+			rh.WriteAndLogError(ctx, http.StatusBadRequest, "Failed to decode request body with order number", err)
 			return
 		}
 
-		// process TradeTransactionStatus
 		tradeResponseStatus, err := apiH.TradeTransactionStatus(ctx, "", order.Number)
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to process TradeTransactionStatus", logging.ErrorAttr(err))
-			http.Error(w, fmt.Sprintf("Unable to obtain transaction status for order: %d", order.Number), http.StatusBadRequest)
+			rh.WriteAndLogError(ctx, http.StatusBadRequest, fmt.Sprintf("Unable to obtain transaction status for order: %d", order.Number), err)
 			return
 		}
 		logger.InfoContext(ctx, "Successfully processed TradeTransactionStatus", logging.RespAttr(tradeResponseStatus))
 
-		// logout user after processing
+		// Logout user after processing.
 		logoutResponse, err := apiH.Logout(ctx)
 		if err != nil {
 			logger.WarnContext(ctx, "Failed to process Logout - killing client", logging.ErrorAttr(err))

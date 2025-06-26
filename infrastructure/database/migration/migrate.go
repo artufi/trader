@@ -9,13 +9,6 @@ import (
 	"io/fs"
 )
 
-func Must(filenames []string, err error) []string {
-	if err != nil {
-		panic(err)
-	}
-	return filenames
-}
-
 func Up(db *sql.DB) ([]string, error) {
 	goose.SetBaseFS(migrations.FSMigrations)
 
