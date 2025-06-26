@@ -1,9 +1,8 @@
-package controller
+package helper
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/artufi/trader/http/middleware"
 	"io"
 	"log/slog"
 	"net/http"
@@ -17,13 +16,12 @@ func newDiscardLogger() *slog.Logger {
 	}))
 }
 
-func TestResponseHelper_WriteJSON_Success(t *testing.T) {
+func TestResponse_WriteJSON_Success(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	respHelper := ResponseHelper{
-		Logger:  newDiscardLogger(),
-		Writer:  recorder,
-		TraceID: "traceID-test",
+	respHelper := Response{
+		Logger: newDiscardLogger(),
+		Writer: recorder,
 	}
 
 	respHelper.WriteJSON(context.Background(), http.StatusCreated, nil)
@@ -34,18 +32,14 @@ func TestResponseHelper_WriteJSON_Success(t *testing.T) {
 	if ct := recorder.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("expected: application/json, got: %s", ct)
 	}
-	if xTraceID := recorder.Header().Get(middleware.XTraceIDHeader); xTraceID != "traceID-test" {
-		t.Errorf("expected X-Trace-ID: %s, got: %s", "traceID-test", xTraceID)
-	}
 }
 
-func TestResponseHelper_WriteJSON_SuccessWithValidData(t *testing.T) {
+func TestResponse_WriteJSON_SuccessWithValidData(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	respHelper := ResponseHelper{
-		Logger:  newDiscardLogger(),
-		Writer:  recorder,
-		TraceID: "traceID-test",
+	respHelper := Response{
+		Logger: newDiscardLogger(),
+		Writer: recorder,
 	}
 
 	type dummyResponse struct {
@@ -66,13 +60,12 @@ func TestResponseHelper_WriteJSON_SuccessWithValidData(t *testing.T) {
 	}
 }
 
-func TestResponseHelper_WriteJSON_FailedToEncodeJSONData(t *testing.T) {
+func TestResponse_WriteJSON_FailedToEncodeJSONData(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	respHelper := ResponseHelper{
-		Logger:  newDiscardLogger(),
-		Writer:  recorder,
-		TraceID: "traceID-test",
+	respHelper := Response{
+		Logger: newDiscardLogger(),
+		Writer: recorder,
 	}
 
 	wrongData := struct {
@@ -97,13 +90,12 @@ func TestResponseHelper_WriteJSON_FailedToEncodeJSONData(t *testing.T) {
 	}
 }
 
-func TestResponseHelper_WriteErrorJSON_SuccessWithValidData(t *testing.T) {
+func TestResponse_WriteErrorJSON_SuccessWithValidData(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	respHelper := ResponseHelper{
-		Logger:  newDiscardLogger(),
-		Writer:  recorder,
-		TraceID: "traceID-test",
+	respHelper := Response{
+		Logger: newDiscardLogger(),
+		Writer: recorder,
 	}
 
 	expectedData := ErrorResponse{Error: "test-error-message"}

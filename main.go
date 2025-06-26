@@ -163,7 +163,7 @@ func initTestUser(cfg config.AppConfig, logger *slog.Logger, userService model.U
 
 func setupHTTPRouter(cfg config.AppConfig, logger *slog.Logger, purchaseC controller.Purchase, wsManager *websocket.WSManager) http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.TraceIDMiddleware)
+	r.Use(middleware.TraceIDMiddleware(logger))
 	r.Get("/purchases", purchaseC.PurchasesHandler)
 	r.Route("/purchase", func(r chi.Router) {
 		r.Get("/", purchaseC.PurchaseHandler)
