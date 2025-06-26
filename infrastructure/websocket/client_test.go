@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"io"
 	"log/slog"
@@ -162,6 +163,7 @@ func TestWSClient_WriteText_Success(t *testing.T) {
 	var resp []byte
 	var err error
 	messageID := "testMsgID"
+	fmt.Println(err)
 	go func() {
 		resp, err = wsClient.WriteText(context.Background(), messageID, []byte(expectedResp))
 		close(done)
