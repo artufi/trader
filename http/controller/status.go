@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/http/helper"
 	"github.com/artufi/trader/http/middleware"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
@@ -20,7 +21,7 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 
 		logger.InfoContext(ctx, "Start processing transaction status request")
 
-		rh := ResponseHelper{Logger: logger, Writer: w, TraceID: traceID}
+		rh := helper.Response{Logger: logger, Writer: w, TraceID: traceID}
 
 		wsClient, err := wsManager.DialForNewClient(ctx, cfg.XTB.Demo.WebSocketURL, nil, userID)
 		if err != nil {

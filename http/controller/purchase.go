@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/http/helper"
 	"github.com/artufi/trader/http/middleware"
 	"github.com/artufi/trader/infrastructure/websocket"
 	"github.com/artufi/trader/logging"
@@ -33,7 +34,7 @@ func (p *Purchase) PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.Logger.InfoContext(ctx, "Start processing purchase request")
 
-	rh := ResponseHelper{Logger: p.Logger, Writer: w, TraceID: traceID}
+	rh := helper.Response{Logger: p.Logger, Writer: w, TraceID: traceID}
 
 	var prediction model.PredictionDetails
 	if err := json.NewDecoder(r.Body).Decode(&prediction); err != nil {
@@ -51,7 +52,7 @@ func (p *Purchase) PurchasesHandler(w http.ResponseWriter, r *http.Request) {
 	userID := p.Cfg.XTB.Demo.UserID
 	ctx := logging.AppendAttrsCtx(r.Context(), logging.TraceIDAttr(traceID), logging.UserIDAttr(userID))
 
-	rh := ResponseHelper{Logger: p.Logger, Writer: w, TraceID: traceID}
+	rh := helper.Response{Logger: p.Logger, Writer: w, TraceID: traceID}
 
 	p.Logger.InfoContext(ctx, "Start processing purchases request")
 
@@ -70,7 +71,7 @@ func (p *Purchase) PurchasesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Purchase) processPrediction(ctx context.Context, predictionDetails model.PredictionDetails, userID string,
-	traceID string, rh ResponseHelper) {
+	traceID string, rh helper.Response) {
 	userIDInt, err := strconv.Atoi(userID)
 	if err != nil {
 		rh.WriteAndLogError(ctx, http.StatusBadRequest, "Invalid userID", err)

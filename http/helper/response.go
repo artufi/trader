@@ -1,4 +1,4 @@
-package controller
+package helper
 
 import (
 	"bytes"
@@ -15,13 +15,13 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-type ResponseHelper struct {
+type Response struct {
 	Logger  *slog.Logger
 	Writer  http.ResponseWriter
 	TraceID string
 }
 
-func (rh ResponseHelper) WriteJSON(ctx context.Context, statusCode int, jsonData any) {
+func (rh Response) WriteJSON(ctx context.Context, statusCode int, jsonData any) {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(jsonData); err != nil {
 		rh.Logger.ErrorContext(ctx, "Failed to encode response", logging.ErrorAttr(err))
@@ -44,17 +44,17 @@ func (rh ResponseHelper) WriteJSON(ctx context.Context, statusCode int, jsonData
 	rh.writeRawJSON(ctx, statusCode, buf.Bytes())
 }
 
-func (rh ResponseHelper) WriteErrorJSON(ctx context.Context, statusCode int, errMsg string) {
+func (rh Response) WriteErrorJSON(ctx context.Context, statusCode int, errMsg string) {
 	resp := ErrorResponse{Error: errMsg}
 	rh.WriteJSON(ctx, statusCode, resp)
 }
 
-func (rh ResponseHelper) WriteAndLogError(ctx context.Context, statusCode int, msg string, err error) {
+func (rh Response) WriteAndLogError(ctx context.Context, statusCode int, msg string, err error) {
 	rh.Logger.ErrorContext(ctx, msg, logging.ErrorAttr(err))
 	rh.WriteErrorJSON(ctx, statusCode, msg)
 }
 
-func (rh ResponseHelper) writeRawJSON(ctx context.Context, statusCode int, data []byte) {
+func (rh Response) writeRawJSON(ctx context.Context, statusCode int, data []byte) {
 	rh.setHeaders()
 	rh.Writer.WriteHeader(statusCode)
 	if _, err := rh.Writer.Write(data); err != nil {
@@ -62,7 +62,7 @@ func (rh ResponseHelper) writeRawJSON(ctx context.Context, statusCode int, data 
 	}
 }
 
-func (rh ResponseHelper) setHeaders() {
+func (rh Response) setHeaders() {
 	rh.Writer.Header().Set("Content-Type", "application/json")
 	if rh.TraceID != "" {
 		rh.Writer.Header().Set(middleware.XTraceIDHeader, rh.TraceID)

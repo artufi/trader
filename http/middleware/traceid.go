@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"context"
-	"github.com/artufi/trader/http/controller"
+	"github.com/artufi/trader/http/helper"
 	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
@@ -23,7 +23,7 @@ func TraceIDMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 				var err error
 				traceID, err = generateTraceID()
 				if err != nil {
-					rh := controller.ResponseHelper{Logger: logger, Writer: w}
+					rh := helper.Response{Logger: logger, Writer: w}
 					rh.WriteErrorJSON(r.Context(), http.StatusInternalServerError, "Failed to generate traceID for the request")
 					return
 				}

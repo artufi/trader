@@ -1,4 +1,4 @@
-package controller
+package helper
 
 import (
 	"context"
@@ -17,10 +17,10 @@ func newDiscardLogger() *slog.Logger {
 	}))
 }
 
-func TestResponseHelper_WriteJSON_Success(t *testing.T) {
+func TestResponse_WriteJSON_Success(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	respHelper := ResponseHelper{
+	respHelper := Response{
 		Logger:  newDiscardLogger(),
 		Writer:  recorder,
 		TraceID: "traceID-test",
@@ -39,10 +39,10 @@ func TestResponseHelper_WriteJSON_Success(t *testing.T) {
 	}
 }
 
-func TestResponseHelper_WriteJSON_SuccessWithValidData(t *testing.T) {
+func TestResponse_WriteJSON_SuccessWithValidData(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	respHelper := ResponseHelper{
+	respHelper := Response{
 		Logger:  newDiscardLogger(),
 		Writer:  recorder,
 		TraceID: "traceID-test",
@@ -66,10 +66,10 @@ func TestResponseHelper_WriteJSON_SuccessWithValidData(t *testing.T) {
 	}
 }
 
-func TestResponseHelper_WriteJSON_FailedToEncodeJSONData(t *testing.T) {
+func TestResponse_WriteJSON_FailedToEncodeJSONData(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	respHelper := ResponseHelper{
+	respHelper := Response{
 		Logger:  newDiscardLogger(),
 		Writer:  recorder,
 		TraceID: "traceID-test",
@@ -97,10 +97,10 @@ func TestResponseHelper_WriteJSON_FailedToEncodeJSONData(t *testing.T) {
 	}
 }
 
-func TestResponseHelper_WriteErrorJSON_SuccessWithValidData(t *testing.T) {
+func TestResponse_WriteErrorJSON_SuccessWithValidData(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	respHelper := ResponseHelper{
+	respHelper := Response{
 		Logger:  newDiscardLogger(),
 		Writer:  recorder,
 		TraceID: "traceID-test",
