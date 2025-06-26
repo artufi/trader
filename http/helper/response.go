@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/artufi/trader/http/middleware"
 	"github.com/artufi/trader/logging"
 	"log/slog"
 	"net/http"
@@ -16,16 +15,14 @@ type ErrorResponse struct {
 }
 
 type Response struct {
-	Logger  *slog.Logger
-	Writer  http.ResponseWriter
-	TraceID string
+	Logger *slog.Logger
+	Writer http.ResponseWriter
 }
 
 func (rh Response) WriteJSON(ctx context.Context, statusCode int, jsonData any) {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(jsonData); err != nil {
 		rh.Logger.ErrorContext(ctx, "Failed to encode response", logging.ErrorAttr(err))
-
 		// Fallback error response to prevent infinite recursion if encoding fails.
 		fallback := ErrorResponse{Error: http.StatusText(http.StatusInternalServerError)}
 		raw, err := json.Marshal(fallback)
@@ -36,7 +33,6 @@ func (rh Response) WriteJSON(ctx context.Context, statusCode int, jsonData any) 
 			rh.Writer.Write([]byte(fmt.Sprintf(`{"error":%q}`, err)))
 			return
 		}
-
 		rh.writeRawJSON(ctx, http.StatusInternalServerError, raw)
 		return
 	}
@@ -64,7 +60,4 @@ func (rh Response) writeRawJSON(ctx context.Context, statusCode int, data []byte
 
 func (rh Response) setHeaders() {
 	rh.Writer.Header().Set("Content-Type", "application/json")
-	if rh.TraceID != "" {
-		rh.Writer.Header().Set(middleware.XTraceIDHeader, rh.TraceID)
-	}
 }

@@ -21,7 +21,7 @@ func TransactionStatusHandler(cfg config.AppConfig, wsManager *websocket.WSManag
 
 		logger.InfoContext(ctx, "Start processing transaction status request")
 
-		rh := helper.Response{Logger: logger, Writer: w, TraceID: traceID}
+		rh := helper.Response{Logger: logger, Writer: w}
 
 		wsClient, err := wsManager.DialForNewClient(ctx, cfg.XTB.Demo.WebSocketURL, nil, userID)
 		if err != nil {

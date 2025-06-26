@@ -29,6 +29,7 @@ func TraceIDMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 				}
 			}
 			ctx := context.WithValue(r.Context(), traceIDKey, traceID)
+			w.Header().Set(XTraceIDHeader, traceID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

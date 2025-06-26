@@ -34,7 +34,7 @@ func (p *Purchase) PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.Logger.InfoContext(ctx, "Start processing purchase request")
 
-	rh := helper.Response{Logger: p.Logger, Writer: w, TraceID: traceID}
+	rh := helper.Response{Logger: p.Logger, Writer: w}
 
 	var prediction model.PredictionDetails
 	if err := json.NewDecoder(r.Body).Decode(&prediction); err != nil {
@@ -52,7 +52,7 @@ func (p *Purchase) PurchasesHandler(w http.ResponseWriter, r *http.Request) {
 	userID := p.Cfg.XTB.Demo.UserID
 	ctx := logging.AppendAttrsCtx(r.Context(), logging.TraceIDAttr(traceID), logging.UserIDAttr(userID))
 
-	rh := helper.Response{Logger: p.Logger, Writer: w, TraceID: traceID}
+	rh := helper.Response{Logger: p.Logger, Writer: w}
 
 	p.Logger.InfoContext(ctx, "Start processing purchases request")
 
