@@ -1,104 +1,91 @@
-# 🧠 Real-Time Trading Bot for XTB WebSocket API
+# Trading Bot for XTB WebSocket API
 
-⚠️ **Note**: The XTB API is no longer available. This project has been open-sourced to demonstrate the architecture, 
-design principles, and development approach behind a real-time trading bot.
+[![CI](https://github.com/artufi/trader/actions/workflows/ci.yaml/badge.svg)](https://github.com/artufi/trader/actions/workflows/ci.yaml)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/artufi/trader)](go.mod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
----
+A real-time trading bot written in Go for the XTB WebSocket API. It connects to XTB over
+WebSocket for market data and trade execution, manages a pool of concurrent trading clients
+per user, and routes AI-generated signals to matching strategies.
 
-> **TL;DR**: A real-time trading bot written in Go, built specifically for the XTB WebSocket API.  
-> Supports multiple users, concurrent trading clients, and AI-generated signals.  
-> Designed with clean code principles, high responsiveness, and future scalability in mind.  
-> Now released as an educational project and development reference.
+> **Note:** The XTB API is no longer publicly available, so the bot cannot run end-to-end: it
+> depends on that API and the connection pool fails to start without it. This project is
+> open-sourced as a reference for backend architecture, concurrency, and real-time systems
+> design in Go.
 
----
+## Features
 
-## 🚀 About the Project
+- Real-time communication with the XTB API over WebSocket, including the streaming endpoint.
+- A managed pool of concurrent, per-user trading clients with automatic reconnection.
+- Routing of AI-generated signals (ML model output) to matching strategies.
+- Internal tracking of trades with interval-based position closing.
+- Structured, context-aware logging with per-request trace IDs.
+- Graceful shutdown and PostgreSQL-backed persistence.
 
-This bot was built to connect to the XTB trading platform using WebSocket for real-time market data and trade execution.  
-Each user could subscribe to specific strategies or timeframes, and the bot would respond to signals accordingly  
-by spawning lightweight, fast-response clients to execute trades independently and in parallel, 
-ensuring low latency and high reliability.
+## Architecture
 
-The internal API was implemented in REST for simplicity and early testing. In the future, 
-**streaming or event-driven communication** could replace REST to lower signal latency.
+The codebase is organised into clear layers:
 
-The broader vision included a move to the cloud, infrastructure automation, CI/CD pipelines and full observability.
+| Package | Responsibility |
+| --- | --- |
+| `config` | Application configuration loading (dotenv / YAML). |
+| `infrastructure/database` | PostgreSQL connection pool and Goose migrations. |
+| `infrastructure/websocket` | WebSocket client and connection lifecycle, pooling, reconnection. |
+| `xtb` | XTB protocol: commands, request/response models, processors. |
+| `http` | REST controllers, middleware (trace IDs), response helpers. |
+| `model` | Domain entities and persistence (users, predictions, orders). |
+| `history` | Trade streaming and interval-based order closing. |
+| `logging` | Custom `slog` handler that propagates attributes through `context`. |
 
----
+### Connections
 
-## ⚙️ Core Features
+`ConnManager` opens a pool of WebSocket clients per user. Each connection runs in its own
+goroutine that logs in, sends keep-alive pings, and reconnects automatically when the
+connection drops.
 
-- ✅ Trading across multiple timeframes.
-- ✅ Parallel execution of lightweight trading clients.
-- ✅ Real-time communication with the XTB API over WebSocket protocol.
-- ✅ Routing of AI-generated signals (ML model) to matching strategy subscribers.
-- ✅ Internal tracking of trades and cleanup logic.
-- ✅ Straightforward, extendable code structure.
+Two client types map to the two XTB endpoints:
 
----
+- **Request/response client** (`WSClient`) talks to the main endpoint. Each command carries a
+  `customTag`, a `pending` map correlates the command with its single reply, and a per-client
+  mutex guards the WebSocket's single writer.
+- **Streaming client** (`WSClientStream`) talks to the streaming endpoint. It subscribes to a
+  feed and receives pushed updates over a channel. It has no request/response correlation and
+  authenticates with a stream session ID borrowed from a logged-in `WSClient`.
 
-## 💭 Why Open Source?
+The pool exists so that every subscribed user keeps a few already-authenticated, long-lived
+connections ready to act the moment a signal arrives. Logging in is costly and the API
+rate-limits requests, so reusing warm connections lets signals execute in parallel with low
+latency instead of opening a fresh session each time. A supervisor goroutine pings each
+connection to keep it alive and transparently reconnects on failure, so the pool stays reliable
+on its own. The bot also keeps long-lived listening connections open and reacts to pushed
+updates, such as a position closing, rather than polling for them.
 
-This project was developed over time as a personal and experimental system. Once XTB discontinued access to its API,
-I decided to open source the codebase - both to share how such a bot can be built, and to provide a reference
-for backend design in Go.
+### Signal flow
 
-While some parts are incomplete or require refinement, the overall structure shows how to approach real-time systems,
-signal handling, and backend design.
+A REST request carrying a prediction resolves a connected XTB client, fetches symbol data,
+places a trade transaction, and persists the prediction and order. In the background, one
+goroutine streams trade updates into the database, while another closes eligible positions on
+a fixed interval.
 
-The goal is for this project to serve as a practical, understandable foundation for others to explore and learn from.
+## Tech Stack
 
----
+Go, PostgreSQL, Goose (migrations), `gorilla/websocket`, `chi` (routing), `pgx`, Docker Compose.
 
-## 🔮 Future Plans
+## Limitations
 
-The original goal was to eventually build a platform where users could subscribe to strategies or timeframes, 
-and the bot would act on their behalf in real time.
+This is a prototype, not production-ready:
 
-Planned or potential future improvements include:
+- A single hardcoded test user, no authentication or user management.
+- Limited retry and recovery handling on edge cases.
+- Partial test coverage, which is being expanded.
+- The database schema needs indexing and type tuning for scale.
 
-- Support for multiple trading APIs to avoid dependency on a single provider.
-- Retry logic and robust error handling - critical when real funds are involved.
-- Transition from REST to event-driven or streaming-based communication for lower latency.
-- Full observability (metrics, logs, traces) using OpenTelemetry.
-- CI/CD pipelines for testing and deployment.
-- Adding Kubernetes, Helm, and Terraform.
-- Additional test coverage - unit and integration - is still being added.
+## Project background
 
----
+The bot was developed and run on a Raspberry Pi 4. It handled the workload, though performance
+was modest. Development was later paused, and the XTB API was eventually discontinued, at which
+point the project was open-sourced as an architecture and design reference.
 
-## 🛠️ Tech Stack
+## License
 
-- **Go (Golang)** - backend logic and concurrency.
-- **PostgreSQL** - persistent storage of trades and user sessions.
-- **Goose** - database schema migrations.
-- **Dotenv** - for loading environment variables from `.env` file during development.
-- **Docker & Docker Compose** - for local development and deployment.
-- **WebSocket (XTB)** - used for market data and trading interface.
-- **REST** - for simple signal testing and user operations.
-- **OpenTelemetry** (planned) - for logs, metrics, and traces.
-- **Kubernetes + Helm** (planned) - for orchestration and deployment.
-- **Terraform** (planned) - infrastructure as code.
-- **CI/CD** (planned) - to automate testing and deployment pipelines.
-
----
-
-## 🚧 Current Limitations
-
-This project is still a prototype. Known limitations include:
-
-- One hardcoded test user.
-- No user management or authentication services.
-- Retry logic and recovery from edge cases are not yet implemented.
-- Missing CI/CD setup and full observability.
-- Not yet production-ready - especially for handling real capital without additional safety layers.
-- Test coverage is partial, and is being expanded as the codebase evolves.
-- Requires optimization of database schema (e.g., data types, indexes) for long-term scalability and performance.
-
----
-
-## 🤝 Want to Collaborate?
-
-I'm open to feedback, code reviews, or collaborating with others - whether it's about improving the project, 
-sharing ideas, or building something new together.
-Feel free to reach out!
+[MIT](LICENSE)
