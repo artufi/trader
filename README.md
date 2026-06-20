@@ -6,18 +6,20 @@
 
 A real-time trading bot written in Go for the XTB WebSocket API. It connects to XTB over
 WebSocket for market data and trade execution, manages a pool of concurrent trading clients
-per user, and routes AI-generated signals to matching strategies.
+per user, and executes trade signals from an external ML model as buy, sell, or no-action trades.
 
 > **Note:** The XTB API is no longer publicly available, so the bot cannot run end-to-end: it
 > depends on that API and the connection pool fails to start without it. This project is
-> open-sourced as a reference for backend architecture, concurrency, and real-time systems
-> design in Go.
+> open-sourced as a reference for backend architecture, concurrency, and real-time data
+> handling in Go.
 
 ## Features
 
-- Real-time communication with the XTB API over WebSocket, including the streaming endpoint.
+- Real-time communication with the XTB API over WebSocket, across both the request/response and
+  streaming endpoints.
 - A managed pool of concurrent, per-user trading clients with automatic reconnection.
-- Routing of AI-generated signals (ML model output) to matching strategies.
+- Trade signals from an external ML model, consumed over REST and executed as buy, sell, or
+  no-action trades.
 - Internal tracking of trades with interval-based position closing.
 - Structured, context-aware logging with per-request trace IDs.
 - Graceful shutdown and PostgreSQL-backed persistence.
