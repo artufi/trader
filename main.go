@@ -114,7 +114,7 @@ func initLogger() *slog.Logger {
 		AddSource: true,
 	}
 	logger := slog.New(logging.LogHandler{
-		Handler: slog.NewJSONHandler(logging.Must(logging.GetLogFile("app.log")), handlerOptions),
+		Handler: slog.NewJSONHandler(os.Stdout, handlerOptions),
 	})
 	return logger
 }

@@ -3,11 +3,12 @@ package websocket
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/xtb/processor"
-	"log/slog"
-	"time"
 )
 
 const serviceName = "ConnManager"
@@ -73,7 +74,6 @@ func (cs ConnManager) keepUserClientConnected(ctx context.Context, userId, passw
 				cs.Logger.ErrorContext(oldSSIDCtx, "Critical error connection could not be established")
 				// TODO: in the future maybe send an email.
 				panic("conn manager critical error connection could not be established check logs and XTB platform")
-				return
 			}
 			attempt++
 			time.Sleep(time.Second * time.Duration(cs.Cfg.Client.Connection.ReConnectNextTrySec))

@@ -35,7 +35,7 @@ services:
     ports:
       - 4001:4000
     volumes:
-      - ./logs/app.log:/app/app.log
+      - ./config/.env:/app/config/.env:ro
 
 volumes:
   postgres-data:

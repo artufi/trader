@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/artufi/trader/logging"
-	"github.com/artufi/trader/xtb/jsonform"
-	"github.com/gorilla/websocket"
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/artufi/trader/logging"
+	"github.com/artufi/trader/xtb/jsonform"
+	"github.com/gorilla/websocket"
 )
 
 const (
