@@ -3,7 +3,6 @@ package websocket
 import (
 	"context"
 	"errors"
-	"github.com/gorilla/websocket"
 	"io"
 	"log/slog"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 func dialWS(t *testing.T, srv *httptest.Server) *websocket.Conn {
@@ -128,7 +129,9 @@ func TestWSClient_WriteText_ContextCancelledAfterWrite(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		for {
+			wsClient.mutex.Lock()
 			_, ok := wsClient.pending["testMessageID"]
+			wsClient.mutex.Unlock()
 			if ok {
 				cancel()
 				return
@@ -168,7 +171,9 @@ func TestWSClient_WriteText_Success(t *testing.T) {
 	}()
 
 	for {
+		wsClient.mutex.Lock()
 		c, ok := wsClient.pending[messageID]
+		wsClient.mutex.Unlock()
 		if ok {
 			c.Resp = []byte(expectedResp)
 			c.Done <- true
