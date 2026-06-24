@@ -62,6 +62,10 @@ connection to keep it alive and transparently reconnects on failure, so the pool
 on its own. The bot also keeps long-lived listening connections open and reacts to pushed
 updates, such as a position closing, rather than polling for them.
 
+This connection layer is a reusable pattern: multiplexed request/response over a pooled,
+auto-reconnecting WebSocket, applicable to any real-time API client (exchanges, chat, IoT,
+message brokers).
+
 ### Signal flow
 
 A REST request carrying a prediction resolves a connected XTB client, fetches symbol data,

@@ -85,7 +85,7 @@ func TestAppendAttrsCtx(t *testing.T) {
 		}
 	})
 
-	t.Run("deduplicates keeping last value", func(t *testing.T) {
+	t.Run("keeps the last value on duplicate keys", func(t *testing.T) {
 		oldAttr := TraceIDAttr("oldValue")
 		newAttr := TraceIDAttr("newValue")
 		ctx := AppendAttrsCtx(context.Background(), oldAttr, newAttr)
