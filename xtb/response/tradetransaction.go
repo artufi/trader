@@ -87,24 +87,23 @@ func (tts TradeTransactionStatus) CheckCustomTag(customTag string) error {
 
 func (tts TradeTransactionStatus) CheckRequestStatus() (RequestStatus, error) {
 	switch tts.ReturnData.RequestStatus {
-	case ERROR:
-		return ERROR, &RequestStatusError{
-			RequestStatus: RequestStatusName[tts.ReturnData.RequestStatus],
-			Message:       *tts.ReturnData.Message,
-		}
-	case REJECTED:
-		return REJECTED, &RequestStatusError{
-			RequestStatus: RequestStatusName[tts.ReturnData.RequestStatus],
-			Message:       *tts.ReturnData.Message,
-		}
-	case ACCEPTED:
-		return ACCEPTED, nil
-	case PENDING:
-		return PENDING, nil
+	case ACCEPTED, PENDING:
+		return tts.ReturnData.RequestStatus, nil
 	default:
-		return tts.ReturnData.RequestStatus, &RequestStatusError{
-			RequestStatus: "UNKNOWN",
-			Message:       *tts.ReturnData.Message,
-		}
+		return tts.newRequestStatusError()
 	}
+}
+
+func (tts TradeTransactionStatus) newRequestStatusError() (RequestStatus, error) {
+	status, ok := RequestStatusName[tts.ReturnData.RequestStatus]
+	if !ok {
+		status = "UNKNOWN"
+	}
+	rse := &RequestStatusError{
+		RequestStatus: status,
+	}
+	if tts.ReturnData.Message != nil {
+		rse.Message = *tts.ReturnData.Message
+	}
+	return tts.ReturnData.RequestStatus, rse
 }
