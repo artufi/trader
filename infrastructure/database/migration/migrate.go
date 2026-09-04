@@ -2,11 +2,11 @@ package migration
 
 import (
 	"database/sql"
-	"embed"
 	"fmt"
+	"io/fs"
+
 	"github.com/artufi/trader/infrastructure/database/migration/migrations"
 	"github.com/pressly/goose/v3"
-	"io/fs"
 )
 
 func Up(db *sql.DB) ([]string, error) {
@@ -35,9 +35,12 @@ func Down(db *sql.DB) ([]string, error) {
 	return getAllFilenames(migrations.FSMigrations)
 }
 
-func getAllFilenames(efs embed.FS) ([]string, error) {
-	filenames := make([]string, 0, 0)
-	err := fs.WalkDir(efs, ".", func(path string, d fs.DirEntry, err error) error {
+func getAllFilenames(efsys fs.FS) ([]string, error) {
+	var filenames []string
+	err := fs.WalkDir(efsys, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if d.IsDir() {
 			return nil
 		}
