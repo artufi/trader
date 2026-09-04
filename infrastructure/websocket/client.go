@@ -254,6 +254,7 @@ func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 		return
 	}
 	ticker := time.NewTicker(time.Second * interval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
@@ -408,6 +409,7 @@ func (wsc *WSClientStream) Ping(ctx context.Context, interval time.Duration) {
 		return
 	}
 	ticker := time.NewTicker(time.Second * interval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
