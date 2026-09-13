@@ -3,10 +3,11 @@ package model
 import (
 	"errors"
 	"fmt"
-	"github.com/artufi/trader/xtb/command"
-	"github.com/artufi/trader/xtb/response"
 	"math"
 	"time"
+
+	"github.com/artufi/trader/xtb/command"
+	"github.com/artufi/trader/xtb/response"
 )
 
 type PredictionDetails struct {

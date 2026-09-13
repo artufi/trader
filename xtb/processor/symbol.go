@@ -2,10 +2,11 @@ package processor
 
 import (
 	"context"
+	"strings"
+
 	"github.com/artufi/trader/xtb/command"
 	"github.com/artufi/trader/xtb/jsonform"
 	"github.com/artufi/trader/xtb/response"
-	"strings"
 )
 
 const getSymbolExtProc = "getSymbol"

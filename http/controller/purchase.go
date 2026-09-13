@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"net/http"
+	"strconv"
+
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/http/helper"
 	"github.com/artufi/trader/http/middleware"
@@ -12,9 +16,6 @@ import (
 	"github.com/artufi/trader/model"
 	"github.com/artufi/trader/xtb/processor"
 	"github.com/artufi/trader/xtb/response"
-	"log/slog"
-	"net/http"
-	"strconv"
 )
 
 type Purchase struct {

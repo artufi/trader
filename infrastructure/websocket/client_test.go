@@ -49,12 +49,14 @@ func TestWSClient_WriteText_ContextDoneBeforeWritingMessage(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 
 	conn := dialWS(t, srv)
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 	wsClient := newTestWSClient(conn)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -73,13 +75,13 @@ func TestWSClient_WriteText_WriteMessageFails(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 
 	conn := dialWS(t, srv)
 	wsClient := newTestWSClient(conn)
-	conn.Close()
+	_ = conn.Close()
 
 	_, err := wsClient.WriteText(context.Background(), "testMsgID", []byte(`{"customTag":"msg"}`))
 	if err == nil {
@@ -94,12 +96,14 @@ func TestWSClient_WriteText_ContextTimeoutWhileWaitingForResponse(t *testing.T) 
 		if err != nil {
 			t.Fatal(err)
 		}
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 
 	conn := dialWS(t, srv)
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 	wsClient := newTestWSClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -118,12 +122,14 @@ func TestWSClient_WriteText_ContextCancelledAfterWrite(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 
 	conn := dialWS(t, srv)
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 	wsClient := newTestWSClient(conn)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -152,12 +158,14 @@ func TestWSClient_WriteText_Success(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 
 	conn := dialWS(t, srv)
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 	wsClient := newTestWSClient(conn)
 
 	expectedResp := "testResponse"

@@ -3,8 +3,9 @@ package processor
 import (
 	"context"
 	"errors"
-	"github.com/artufi/trader/xtb/response"
 	"testing"
+
+	"github.com/artufi/trader/xtb/response"
 )
 
 type MockClient struct {

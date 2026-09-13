@@ -52,7 +52,7 @@ type WSClient struct {
 }
 
 func (wsc *WSClient) CloseConnection() {
-	wsc.conn.Close()
+	_ = wsc.conn.Close()
 }
 
 func (wsc *WSClient) StopSendRateLimiter() {
@@ -217,9 +217,12 @@ func (wsc *WSClient) WriteText(ctx context.Context, messageID string, data []byt
 
 		// Protect against concurrent writes into connection and map.
 		wsc.mutex.Lock()
+		if err := wsc.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+			wsc.mutex.Unlock()
+			return nil, fmt.Errorf("client writer failed to set write deadline: %w", err)
+		}
 		// Add request to pending map to match with response.
 		wsc.pending[c.ID] = c
-		wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
 		err := wsc.conn.WriteMessage(websocket.TextMessage, data)
 		wsc.mutex.Unlock()
 		if err != nil {
@@ -259,7 +262,10 @@ func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 		select {
 		case <-ticker.C:
 			wsc.logger.InfoContext(ctx, "Ping")
-			wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := wsc.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				wsc.logger.ErrorContext(ctx, "Client failed to set write deadline for Ping", logging.ErrorAttr(err))
+				return
+			}
 			err := wsc.conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				wsc.logger.ErrorContext(ctx, "Client failed to write Ping message", logging.ErrorAttr(err))
@@ -312,7 +318,7 @@ func (wsc *WSClientStream) ReleaseClientStreamResources() {
 }
 
 func (wsc *WSClientStream) CloseConnection() {
-	wsc.conn.Close()
+	_ = wsc.conn.Close()
 }
 
 func (wsc *WSClientStream) StopSendRateLimiter() {
@@ -394,7 +400,9 @@ func (wsc *WSClientStream) WriteText(ctx context.Context, messageID string, data
 	case <-wsc.sendRateLimiter.C:
 		wsc.logger.InfoContext(ctx, "Writing stream message", logging.MsgAttr(string(data)))
 
-		wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		if err := wsc.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+			return nil, fmt.Errorf("client-stream writer failed to set write deadline: %w", err)
+		}
 		err := wsc.conn.WriteMessage(websocket.TextMessage, data)
 		if err != nil {
 			return nil, fmt.Errorf("client-stream writer failed to write message through websocket: %w", err)
@@ -419,7 +427,10 @@ func (wsc *WSClientStream) Ping(ctx context.Context, interval time.Duration) {
 				wsc.logger.ErrorContext(ctx, "Client-stream failed to serialize pingStream", logging.ErrorAttr(err))
 				return
 			}
-			wsc.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := wsc.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				wsc.logger.ErrorContext(ctx, "Client-stream failed to set write deadline for Ping", logging.ErrorAttr(err))
+				return
+			}
 			err = wsc.conn.WriteMessage(websocket.TextMessage, pingStreamJSON)
 			if err != nil {
 				wsc.logger.ErrorContext(ctx, "Client-stream failed to write Ping message", logging.ErrorAttr(err))

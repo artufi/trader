@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"context"
-	"github.com/artufi/trader/http/helper"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
+
+	"github.com/artufi/trader/http/helper"
+	"github.com/google/uuid"
 )
 
 type traceIDCtxKey string

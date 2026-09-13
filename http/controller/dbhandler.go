@@ -3,9 +3,10 @@ package controller
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/model"
-	"log/slog"
 )
 
 const (
