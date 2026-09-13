@@ -72,5 +72,23 @@ func (dec DotEnvCfg) Load() (AppConfig, error) {
 		panic(err)
 	}
 
+	cfg.HTTP.Port = os.Getenv("HTTP_PORT")
+	cfg.HTTP.ReadHeaderTimeoutSec, err = strconv.Atoi(os.Getenv("HTTP_READ_HEADER_TIMEOUT_SEC"))
+	if err != nil {
+		panic(err)
+	}
+	cfg.HTTP.ReadTimeoutSec, err = strconv.Atoi(os.Getenv("HTTP_READ_TIMEOUT_SEC"))
+	if err != nil {
+		panic(err)
+	}
+	cfg.HTTP.WriteTimeoutSec, err = strconv.Atoi(os.Getenv("HTTP_WRITE_TIMEOUT_SEC"))
+	if err != nil {
+		panic(err)
+	}
+	cfg.HTTP.IdleTimeoutSec, err = strconv.Atoi(os.Getenv("HTTP_IDLE_TIMEOUT_SEC"))
+	if err != nil {
+		panic(err)
+	}
+
 	return cfg, nil
 }

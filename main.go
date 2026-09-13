@@ -3,7 +3,16 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
+	"time"
+
 	"github.com/artufi/trader/config"
 	"github.com/artufi/trader/history"
 	"github.com/artufi/trader/http/controller"
@@ -15,16 +24,13 @@ import (
 	"github.com/artufi/trader/model"
 	"github.com/go-chi/chi/v5"
 	ws "github.com/gorilla/websocket"
-	"log/slog"
-	"net/http"
-	"os"
-	"os/signal"
-	"strconv"
-	"syscall"
-	"time"
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -36,7 +42,7 @@ func main() {
 	db, err := initDatabase(ctx, cfg, logger)
 	if err != nil {
 		logger.Error("Failed to initialize database", logging.ErrorAttr(err))
-		os.Exit(1)
+		return 1
 	}
 	defer func() {
 		if dbErr := db.Close(); dbErr != nil {
@@ -44,10 +50,9 @@ func main() {
 		}
 	}()
 
-	err = runMigrations(db, logger)
-	if err != nil {
+	if err = runMigrations(db, logger); err != nil {
 		logger.Error("Failed to run database migrations", logging.ErrorAttr(err))
-		os.Exit(1)
+		return 1
 	}
 
 	userService := model.UserService{
@@ -56,7 +61,7 @@ func main() {
 	}
 	if err = initTestUser(cfg, logger, userService); err != nil {
 		logger.Error("Failed to initialize user", logging.ErrorAttr(err))
-		os.Exit(1)
+		return 1
 	}
 
 	// Initialize WebSocket manager responsible for clients lifecycle.
@@ -93,14 +98,14 @@ func main() {
 		UserService:       userService,
 	}
 	router := setupHTTPRouter(cfg, logger, purchaseC, wsManager)
-	srv := runHTTPServer(router, logger, cancel)
+	srv := runHTTPServer(cfg, router, logger, cancel)
 
 	<-ctx.Done()
-	err = gracefulShutdown(logger, srv)
-	if err != nil {
+	if err = gracefulShutdown(logger, srv); err != nil {
 		logger.Error("Failed to shutdown server", logging.ErrorAttr(err))
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 func loadConfig() config.AppConfig {
@@ -172,16 +177,20 @@ func setupHTTPRouter(cfg config.AppConfig, logger *slog.Logger, purchaseC contro
 	return r
 }
 
-func runHTTPServer(r http.Handler, logger *slog.Logger, cancel context.CancelFunc) *http.Server {
-	port := ":4000"
+func runHTTPServer(cfg config.AppConfig, r http.Handler, logger *slog.Logger, cancel context.CancelFunc) *http.Server {
+	addr := ":" + cfg.HTTP.Port
 	srv := &http.Server{
-		Addr:    port,
-		Handler: r,
+		Addr:              addr,
+		Handler:           r,
+		ReadHeaderTimeout: time.Duration(cfg.HTTP.ReadHeaderTimeoutSec) * time.Second,
+		ReadTimeout:       time.Duration(cfg.HTTP.ReadTimeoutSec) * time.Second,
+		WriteTimeout:      time.Duration(cfg.HTTP.WriteTimeoutSec) * time.Second,
+		IdleTimeout:       time.Duration(cfg.HTTP.IdleTimeoutSec) * time.Second,
 	}
 
-	logger.Info("Starting HTTP server", slog.String("port", port))
+	logger.Info("Starting HTTP server", slog.String("addr", addr))
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("HTTP server error", logging.ErrorAttr(err))
 			cancel()
 		}

@@ -79,7 +79,6 @@ This is a prototype, not production-ready:
 
 - A single hardcoded test user, no authentication or user management.
 - Limited retry and recovery handling on edge cases.
-- Partial test coverage, which is being expanded.
 - The database schema needs indexing and type tuning for scale.
 
 ## Project background
