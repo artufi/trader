@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+
 	"github.com/artufi/trader/xtb/command"
 	"github.com/artufi/trader/xtb/processor"
 	"github.com/artufi/trader/xtb/response"

@@ -10,7 +10,9 @@ func TestGetLogFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error while opening test file: %v", err)
 	}
-	defer os.Remove(tempFile.Name())
+	defer func() {
+		_ = os.Remove(tempFile.Name())
+	}()
 
 	t.Run("success get log file", func(t *testing.T) {
 		file, err := GetLogFile(tempFile.Name())

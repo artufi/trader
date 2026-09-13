@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 // LoadYAMLConf YAML format is required,

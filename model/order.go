@@ -3,8 +3,9 @@ package model
 import (
 	"database/sql"
 	"fmt"
-	"github.com/artufi/trader/xtb/command"
 	"time"
+
+	"github.com/artufi/trader/xtb/command"
 )
 
 type Order struct {
@@ -12,7 +13,7 @@ type Order struct {
 	ID int
 	// xtb order no
 	Number int
-	// xtb position, null indicates position get failure
+	// xtb position, nil indicates position get failure
 	Position *int
 	UserID   int
 	// from PredictionDetails
@@ -50,9 +51,11 @@ func (os OrderService) SelectOpenOrdersWithPosition() ([]Order, error) {
 	if err != nil {
 		return nil, fmt.Errorf("select open orders with positions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
-	orders := make([]Order, 0, 0)
+	orders := make([]Order, 0)
 	for rows.Next() {
 		order := Order{}
 		err = rows.Scan(&order.Number, &order.Position, &order.Symbol, &order.Volume, &order.Closed)
@@ -66,7 +69,6 @@ func (os OrderService) SelectOpenOrdersWithPosition() ([]Order, error) {
 	return orders, nil
 }
 
-// get position to update order record?
 func (os OrderService) SelectOpenOrders() ([]Order, error) {
 	rows, err := os.DB.Query(`
 				SELECT 
@@ -83,9 +85,11 @@ func (os OrderService) SelectOpenOrders() ([]Order, error) {
 	if err != nil {
 		return nil, fmt.Errorf("select open orders: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
-	orders := make([]Order, 0, 0)
+	orders := make([]Order, 0)
 	for rows.Next() {
 		order := Order{}
 		err = rows.Scan(&order.Number, &order.Position, &order.Symbol, &order.Volume, &order.Closed)
@@ -120,9 +124,11 @@ func (os OrderService) SelectClosedOrdersById(orderID int) ([]Order, error) {
 	if err != nil {
 		return nil, fmt.Errorf("select closed orders by id: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
-	orders := make([]Order, 0, 0)
+	orders := make([]Order, 0)
 	for rows.Next() {
 		order := Order{}
 		err = rows.Scan(&order.Number, &order.Position, &order.Symbol, &order.Volume, &order.Closed)

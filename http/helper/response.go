@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/artufi/trader/logging"
 	"log/slog"
 	"net/http"
+
+	"github.com/artufi/trader/logging"
 )
 
 type ErrorResponse struct {
@@ -30,7 +31,7 @@ func (rh Response) WriteJSON(ctx context.Context, statusCode int, jsonData any) 
 			rh.Logger.ErrorContext(ctx, "Failed to marshal fallback error", logging.ErrorAttr(err))
 			rh.setHeaders()
 			rh.Writer.WriteHeader(http.StatusInternalServerError)
-			rh.Writer.Write([]byte(fmt.Sprintf(`{"error":%q}`, err)))
+			_, _ = fmt.Fprintf(rh.Writer, `{"error":%q}`, err)
 			return
 		}
 		rh.writeRawJSON(ctx, http.StatusInternalServerError, raw)

@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+
 	"github.com/artufi/trader/xtb/jsonform"
 	"github.com/artufi/trader/xtb/response"
 )

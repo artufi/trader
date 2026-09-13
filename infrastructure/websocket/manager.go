@@ -3,14 +3,15 @@ package websocket
 import (
 	"context"
 	"fmt"
-	"github.com/artufi/trader/config"
-	"github.com/artufi/trader/logging"
-	"github.com/gorilla/websocket"
 	"log/slog"
 	"math/rand"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/artufi/trader/config"
+	"github.com/artufi/trader/logging"
+	"github.com/gorilla/websocket"
 )
 
 func NewWSManager(cfg config.AppConfig, dialer *websocket.Dialer, logger *slog.Logger) *WSManager {
@@ -52,7 +53,7 @@ func (wsm *WSManager) DialForNewClient(ctx context.Context, url string, requestH
 	conn, resp, err := wsm.dialer.Dial(url, requestHeader)
 	if err != nil {
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			wsm.logger.ErrorContext(ctx, "Failed to dial websocket", logging.ErrorAttr(err), logging.URLAttr(url),
 				"statusCode", resp.StatusCode)
 		} else {
@@ -87,7 +88,7 @@ func (wsm *WSManager) DialForNewStreamClient(ctx context.Context, url string, re
 	conn, resp, err := wsm.dialer.Dial(url, requestHeader)
 	if err != nil {
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			wsm.logger.ErrorContext(ctx, "Manager failed to dial stream websocket", logging.ErrorAttr(err), logging.URLAttr(url),
 				"statusCode", resp.StatusCode)
 		} else {

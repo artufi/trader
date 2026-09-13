@@ -3,6 +3,8 @@ package history
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/artufi/trader/http/controller"
 	"github.com/artufi/trader/logging"
 	"github.com/artufi/trader/model"
@@ -10,7 +12,6 @@ import (
 	"github.com/artufi/trader/xtb/processor"
 	"github.com/artufi/trader/xtb/response"
 	"github.com/google/uuid"
-	"time"
 )
 
 const closeServiceName = "CloseService"

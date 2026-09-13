@@ -1,9 +1,10 @@
 package logging
 
 import (
-	"github.com/artufi/trader/model"
 	"log/slog"
 	"time"
+
+	"github.com/artufi/trader/model"
 )
 
 func AttemptAttr(attempt int) slog.Attr {

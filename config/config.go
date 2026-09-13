@@ -49,6 +49,14 @@ type AppConfig struct {
 	BuySellParams struct {
 		Volume float64
 	}
+
+	HTTP struct {
+		Port                 string
+		ReadHeaderTimeoutSec int
+		ReadTimeoutSec       int
+		WriteTimeoutSec      int
+		IdleTimeoutSec       int
+	}
 }
 
 type Loader interface {

@@ -3,6 +3,7 @@ package jsonform
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/artufi/trader/xtb/command"
 )
 
