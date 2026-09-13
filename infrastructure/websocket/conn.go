@@ -20,6 +20,31 @@ type ConnManager struct {
 	WSManager *WSManager
 }
 
+type attemptCounter struct {
+	max int
+	n   int
+}
+
+func newAttemptCounter(max int) *attemptCounter {
+	return &attemptCounter{max: max, n: 1}
+}
+
+func (a *attemptCounter) attempt() int {
+	return a.n
+}
+
+func (a *attemptCounter) recordSuccess() {
+	a.n = 1
+}
+
+func (a *attemptCounter) recordFailure() (exhausted bool) {
+	if a.n >= a.max {
+		return true
+	}
+	a.n++
+	return false
+}
+
 // OpenConnPool TODO:
 // In the future, it would be beneficial to open a new connection when a new request arrives.
 // If a new request arrives, check the idle map:
@@ -54,7 +79,7 @@ func (cs ConnManager) OpenConnPool(ctx context.Context, userId, password string,
 }
 
 func (cs ConnManager) keepUserClientConnected(ctx context.Context, userId, password string, connNumber int) {
-	attempt := 1
+	attempts := newAttemptCounter(cs.Cfg.Client.Connection.MaxAttempts)
 	// Log old streamSessionID to trace connections.
 	var oldSSID string
 	for {
@@ -69,16 +94,17 @@ func (cs ConnManager) keepUserClientConnected(ctx context.Context, userId, passw
 		wsClient, err := cs.newConnection(oldSSIDCtx, userId, password, connNumber)
 		if err != nil {
 			cs.Logger.WarnContext(oldSSIDCtx, "Unable to login client at the moment", logging.ErrorAttr(err),
-				logging.AttemptAttr(attempt))
-			if attempt == cs.Cfg.Client.Connection.MaxAttempts {
+				logging.AttemptAttr(attempts.attempt()))
+			if attempts.recordFailure() {
 				cs.Logger.ErrorContext(oldSSIDCtx, "Critical error connection could not be established")
 				// TODO: in the future maybe send an email.
 				panic("conn manager critical error connection could not be established check logs and XTB platform")
 			}
-			attempt++
 			time.Sleep(time.Second * time.Duration(cs.Cfg.Client.Connection.ReConnectNextTrySec))
 			continue
 		}
+		attempts.recordSuccess()
+
 		newSSIDCtx := logging.AppendAttrsCtx(oldSSIDCtx, logging.StreamID(wsClient.StreamSessionID))
 		go wsClient.Ping(newSSIDCtx, time.Duration(cs.Cfg.Client.Ping.IntervalSec))
 

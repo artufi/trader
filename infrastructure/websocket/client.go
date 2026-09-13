@@ -139,7 +139,9 @@ func (wsc *WSClient) ReadMessages(ctx context.Context) {
 				continue
 			}
 
+			wsc.mutex.Lock()
 			c := wsc.pending[customTag.ID]
+			wsc.mutex.Unlock()
 			if c == nil {
 				wsc.logger.ErrorContext(ctx,
 					"Client reader response with specified customTag.ID does not correspond to any pending request",
@@ -252,6 +254,7 @@ func (wsc *WSClient) Ping(ctx context.Context, interval time.Duration) {
 		return
 	}
 	ticker := time.NewTicker(time.Second * interval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
@@ -406,6 +409,7 @@ func (wsc *WSClientStream) Ping(ctx context.Context, interval time.Duration) {
 		return
 	}
 	ticker := time.NewTicker(time.Second * interval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
